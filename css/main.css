@@ -1,0 +1,39 @@
+#container {
+	width: 900px;
+	margin: 0 auto;
+}
+
+#left {
+	float: left;
+	width: 300px;
+}
+
+#middle {
+	float: left;
+	width: 300px;
+}
+
+#right {
+	float: right;
+	width: 300px;
+}
+
+.text-center {
+	text-align: center;
+}
+
+.text-left {
+	text-align: left;
+}
+
+.text-right {
+	text-align: right;
+}
+
+.right {
+	float: right;
+}
+
+.pointer {
+	cursor: pointer;
+}
