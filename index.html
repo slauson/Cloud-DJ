@@ -1,0 +1,48 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="/css/main.css"></link>
+		<script type="text/javascript" src="/soundmanager/script/soundmanager2.js"></script>
+		<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+		<script type="text/javascript" src="/js/song.js"></script>
+		<script type="text/javascript" src="/js/user.js"></script>
+		<script type="text/javascript" src="/js/main.js"></script>
+	</head>
+	<body>
+		<div id="container">
+		<div id="left">
+			<h2>Session List</h2>
+			<ul id="session_list"></ul>
+		</div>
+		
+		<div id="middle" class="text-center">
+			<h2>Currently Playing</h2>
+			
+			<div id="song">
+				<div id="song_title">Song 1</div></br>
+				<div id="song_playback"></div></br>
+				<hr></br>
+			</div>
+			
+			<button id="leave_session">Leave Session</button>
+			<button id="start_session">Start Session</button><br/>
+			
+			<div id="upload_song_form">
+				<form method="POST" enctype="multipart/form-data">
+					<input type="file" name="file">
+					<button id="play_song">Play</button>
+				</form>
+			</div>
+		
+			<button id="logout">Logout</button>
+		
+		</div>
+		
+		<div id="right">
+			<div class="right">
+				<h2>Listener List</h2>
+				<ul id="listener_list"></ul>
+			</div>
+		</div>
+		</div>
+	</body>
+</html>
