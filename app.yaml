@@ -6,4 +6,10 @@ threadsafe: true
 
 handlers:
 - url: /.*
-  script: helloworld.app
+  script: dataServer.app
+
+libraries:
+- name: jinja2
+  version: latest
+- name: django
+  version: latest
