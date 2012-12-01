@@ -17,7 +17,7 @@ from google.appengine.ext.webapp.util import run_wsgi_app
 class Session(db.Model):
     host = db.UserProperty()        # Host user
 #    listener = db.UserProperty()    # Listener user
-    listeners = db.ListProperty(db.UserProperty)    # List of listeners
+#    listeners = db.ListProperty(db.UserProperty)    # List of listeners
     song = db.StringProperty()      # Song data
     data = db.BlobProperty()        # Data 
     eFlag = db.BooleanProperty()    # End flag
@@ -126,12 +126,19 @@ class MainPage(webapp.RequestHandler):
         else:
             self.response.out.write('No existing session')
 
+class TestPage(webapp.RequestHandler):
+    def get(self):
+        template = jinja_environment.get_template('index.html')
+        self.response.out.write(template.render({}))
+
 jinja_environment = jinja2.Environment(
     loader=jinja2.FileSystemLoader(os.path.dirname(__file__)))
-app = webapp.WSGIApplication([('/', MainPage)], debug=True)   
+app = webapp.WSGIApplication(
+	[('/', MainPage),
+	 ('/test', TestPage)], debug=True)
 
 def main():
     run_wsgi_app(app)
     
 if __name__ == "__main__":
-    main()     
+    main()
