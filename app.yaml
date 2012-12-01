@@ -5,6 +5,15 @@ api_version: 1
 threadsafe: true
 
 handlers:
+- url: /soundmanager
+  static_dir: js/soundmanagerv297a-20121104
+
+- url: /js
+  static_dir: js
+
+- url: /css
+  static_dir: css
+
 - url: /.*
   script: dataServer.app
 
