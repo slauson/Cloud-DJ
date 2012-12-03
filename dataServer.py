@@ -17,7 +17,7 @@ from google.appengine.ext.webapp.util import run_wsgi_app
 class Session(db.Model):
     host = db.UserProperty()        # Host user
 #    listener = db.UserProperty()    # Listener user
-#    listeners = db.ListProperty(db.UserProperty)    # List of listeners
+    listeners = db.ListProperty(users.User)    # List of listeners
     song = db.StringProperty()      # Song data
     data = db.BlobProperty()        # Data 
     eFlag = db.BooleanProperty()    # End flag
@@ -47,10 +47,11 @@ class SessionUpdater():
             channel.send_message(lst.user_id() + self.session.key().id_or_name(), message)
     
     # Song stuff
-    def update_song(self, data, endFlag):
+    def update_song(self, song, data, eFlag):
         # send data
+        self.session.song = song
         self.session.data = data
-        self.session.eFlag = endFlag
+        self.session.eFlag = eFlag
         self.session.put()
         self.send_update()
         
@@ -74,9 +75,10 @@ class UpdateSong(webapp.RequestHandler):
         session = SessionFromRequest(self.request).get_session()
         user = users.get_current_user()
         if session and user:
+            song = self.request.get('song')
             data = self.request.get('data')
             endFlag = self.request.get('endflag')
-            SessionUpdater(session).update_song(data, endFlag)
+            SessionUpdater(session).update_song(song, data, endFlag)
 
 # Request to update the page
 class OpenPage(webapp.RequestHandler):
@@ -135,6 +137,8 @@ jinja_environment = jinja2.Environment(
     loader=jinja2.FileSystemLoader(os.path.dirname(__file__)))
 app = webapp.WSGIApplication(
 	[('/', MainPage),
+     ('/open', OpenPage),
+     ('/update', UpdateSong),
 	 ('/test', TestPage)], debug=True)
 
 def main():
