@@ -20,16 +20,16 @@
 			<div id="song">
 				<div id="song_title">Song 1</div></br>
 				<div id="song_playback"></div></br>
+				<div id="song_loading"></div></br>
 				<hr></br>
 			</div>
 			
 			<button id="leave_session">Leave Session</button>
 			<button id="start_session">Start Session</button><br/>
 			
-			<div id="upload_song_form">
-				<form method="POST" enctype="multipart/form-data">
+			<div id="upload_song">
+				<form id="upload_song_form" action="/upload" method="POST" enctype="multipart/form-data">
 					<input type="file" name="file">
-					<button id="play_song">Play</button>
 				</form>
 			</div>
 		

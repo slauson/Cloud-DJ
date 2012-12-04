@@ -1,25 +1,42 @@
 /*
  Song object
  */
-function song(title, url) {
+function song(title, url, position) {
 	this.title = title;
 	this.url = url;
 	
 	this.sound = soundManager.createSound({
 		id: title,
 		url: url,
+		position: position,
 		autoLoad: true,
 		autoPlay: true,
 		onload:function() {
 			console.log(this.id + ' done loading');
+			$('#song_loading').hide();
 		},
 		onfinish:function() {
 			console.log(this.id + ' done playing');
+
+			// if hosting session, show upload song form
+			if (hostingSession) {
+				$('#upload_song').show();
+			} else {
+				getNextSong(currentSession.sessionId);
+			}
 		},
 		whileloading:function() {
 			console.log(this.id + ' loading (' + this.bytesLoaded + ' / ' + this.bytesTotal + ')');
+
+			// update loading bar/percentage
+			var str = Math.floor((this.bytesLoaded/this.bytesTotal)*100) + '%';
+
+			if (str != $('#song_loading').html) {
+				$('#song_loading').html(str);
+			}
 		},
 		whileplaying:function() {
+			// update time of song
 			var str = getTimeStr(this.position/1000) + ' / ' + getTimeStr(this.duration/1000);
 			
 			if (str != $('#song_playback').html) {
@@ -29,14 +46,31 @@ function song(title, url) {
 		},
 		volume: 50
 	});
-	
+
+	// show playback/loading info
+	$('#song_playback').show();
+	$('#song_loading').show();
+
 	this.cleanup = function() {
 		this.sound.destruct();
 	}
 }
 
+/*
+ ---------------------------------------
+ Methods
+ ---------------------------------------
+ */
+
+/*
+ Updates song information from current song
+ */
 function updateSongInfo() {
-	$('#song_title').html(currentSong.title);
+	if (currentSong) {
+		$('#song_title').html(currentSong.title);
+	} else {
+		$('#song_title').html('');
+	}
 }
 
 /*
@@ -50,8 +84,20 @@ function updateSongInfo() {
 function addSong() {
 	console.log('addSong');
 
-	// hide add song form
-	$('#upload_song_form').hide();
+	if (testing) {
+		// hide add song form
+		$('#upload_song').hide();
+	} else {
+
+		$('#upload_song_form').submit();
+
+		// TODO: handle response
+
+		session = new session(sessionId, 'sample title', 'me');
+
+		// hide add song form
+		$('#upload_song').hide();
+	}
 }
 
 /*
@@ -65,78 +111,20 @@ function addSong() {
 function getNextSong() {
 	console.log('getNextSong');
 
-	// if host, show upload song form
+	/*
+	 request
+	  - session id
+	 response
+	  - title
+	  - url
+	 */
+	$.get('/song',
+		{sessionId: currentSession.sessionId},
+		function(data) {
+			console.log('/song response:' + data);
+			// update song
+			currentSong = new song(data.title, data.url, 0);
+			updateSongInfo();
+		}
+	);
 }
-
-/*function song(title, basename, numParts) {
-	this.title = title;
-	this.basename = basename;
-	this.numParts = numParts;
-	
-	// last part that's been loaded
-	this.loadPart = -1;
-	
-	// part that's currently playing
-	this.playPart = -1;
-	
-	// array of sounds to play in sequence
-	this.sounds = new Array();
-	
-	// create sounds
-	for (var i = 1; i <= numParts; i++) {
-		var sound = soundManager.createSound({
-			id: basename + '-0' + i,
-			url: '/music/split-audacity/' + basename + '-0' + i + '.mp3',
-			//autoLoad: false,
-			//autoPlay: false,
-			multiShot: false,
-			onload:function() {
-				currentSong.loadNext();
-			},
-			onfinish:function() {
-				currentSong.playNext();
-			},
-			whileplaying:function() {
-				console.log(this.id + ', ' + this.position + ', ' + this.duration);
-			},
-			volume: 50
-		});
-		
-		this.sounds.push(sound);
-	}
-
-	this.loadNext = function() {
-		console.log('song loadNext ' + this.loadPart + ' < ' + this.numParts);
-		if (this.loadPart < this.numParts) {
-			this.loadPart++;
-			this.sounds[this.loadPart].load();
-		}
-	}
-	
-	this.playNext = function() {
-		console.log('song playNext ' + this.playPart + ' < ' + this.numParts);
-		if (this.playPart < this.numParts) {
-			this.playPart++;
-			this.sounds[this.playPart].play();
-		}
-	}
-
-	this.load = function() {
-		console.log('song load');
-		if (this.loadPart == 0) {
-			this.sounds[0].load();
-		}
-	}
-	
-	this.play = function() {
-		console.log('song play');
-		this.playPart = 0;
-		this.sounds[0].play();
-	}
-	
-	this.stop = function() {
-		this.sounds[this.playPart].stop();
-		this.playPart = 0;
-	}
-		
-}*/

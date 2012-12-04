@@ -2,11 +2,18 @@
 // this is the current song that the user is listening to
 var currentSong;
 
-// this is a list of potential session
+// this is the current session
+var currentSession;
+
+// this is a list of potential sessions
 var sessions = new Array();
 
-// this is a list of listeners of current song
+// this is a list of listeners for current session
 var listeners = new Array();
+
+var hostingSession = false;
+
+var testing = true;
 
 var initialized = false;
 
@@ -18,7 +25,7 @@ function setup() {
 		$('#leave_session').click(leaveSession);
 		$('#start_session').click(startSession);
 		$('#logout').click(logout);
-		$('#play_song').click(addSong);
+		$('#upload_song_form').change(addSong);
 		// NOTE: session list click handlers will be set up dynamically
 		
 		initialized = true;
@@ -42,10 +49,11 @@ function setup() {
 	// change visibilities
 	$('#start_session').show();
 	$('#leave_session').hide();
-	$('#upload_song_form').hide();	
+	$('#upload_song').hide();
 	
-	
-	testSessions();
+	if (testing) {
+		testSessions();
+	}
 }
 
 // populate session list with samples
@@ -87,11 +95,15 @@ function test() {
 }
 
 function start() {
-	currentSong.play();
+	if (currentSong != null) {
+		currentSong.play();
+	}
 }
 
 function stop() {
-	currentSong.stop();
+	if (currentSong != null) {
+		currentSong.stop();
+	}
 }
 
 function getTimeStr(seconds) {

@@ -12,16 +12,22 @@ function listener(username) {
 /*
  Session
  */
-function session(sessionId, title, username) {
+function session(sessionId, username, title) {
 	this.sessionId = sessionId;
-	this.title = title;
 	this.username = username;
+	this.title = title;
 	
 	this.getList = function() {
 		return '<li class="pointer" onclick="joinSession(' + this.sessionId + ')">'
 			+ this.title + ' (' + this.username + ')</li>';
 	}
 }
+
+/*
+ ---------------------------------------
+ Methods
+ ---------------------------------------
+ */
 
 /*
  Updates listener list from listener array
@@ -62,9 +68,26 @@ function logout() {
 	// stop song
 	soundManager.stopAll();
 	$('#song_playback').html('');
-	currentSong.cleanup();
 	
-	setup();
+	if (currentSong) {
+		currentSong.cleanup();
+	}
+
+	if (testing) {
+		setup();
+	} else {
+		/*
+		 request
+		 response
+		 */
+		$.get('/logout',
+			{},
+			function(data) {
+				console.log('/logout response:' + data);
+				alert('/logout response: ' + data);
+			}
+		);
+	}
 	
 	// get redirected to login page
 }
@@ -78,22 +101,72 @@ function logout() {
 function joinSession(sessionId) {
 	console.log('joinSession');
 
-	// send request
+	if (testing) {
+		// update song
+		currentSong = new song('15 Step', '/music/15_step.mp3', 0);
 	
-	// show leave session button
-	$('#leave_session').show();
+		// update liseners
+		testListeners();
+
+		// update session
+		hostingSession = false;
+		session = new session(sessionId, '15 Step', 'User 1');
+
+		// show leave session button
+		$('#leave_session').show();
+
+		// hide start session button
+		$('#start_session').hide();
+
+		// hide add song form
+		$('#upload_song').hide();
+
+	} else {
+
+		/*
+		 request
+		  - session_id
+		 response
+		  - title
+		  - url
+		  - position
+		  - username
+		  - listeners list
+		 */
+		$.get('/joinSession',
+			{sessionId: sessionId},
+			function(data) {
+				console.log('/joinSession response:' + data);
+
+				// update song
+				currentSong = new song(data.title, data.url, data.position);
+				updateSongInfo();
+
+				// update listeners
+				listeners = new Array();
+				for (idx in data.listeners) {
+					listener = new listener(data.listeners[idx]);
+					listeners.push(listener);
+				}
+
+				// update session
+				hostingSession = false;
+				session = new session(sessionId, data.title, data.username);
+
+				// show leave session button
+				$('#leave_session').show();
 	
-	// hide start session button
-	$('#start_session').hide();
+				// hide start session button
+				$('#start_session').hide();
 	
-	// hide add song form
-	$('#upload_song_form').hide();
-	
-	// update song
-	currentSong = new song('15 Step', '/music/15_step.mp3');
-	
-	// update liseners
-	testListeners();
+				// hide add song form
+				$('#upload_song').hide();
+			}
+		);
+
+		// TODO: show loading bar?
+
+	}
 }
 
 /*
@@ -116,6 +189,22 @@ function leaveSession() {
 	// manage buttons
 	$('#start_session').show();
 	$('#leave_session').hide();
+
+	if (testing) {
+		// do nothing
+	} else {
+		/*
+		 request
+		  - session_id
+		 response
+		 */
+		$.get('/leaveSession',
+			{sessionId: sessionId},
+			function(data) {
+				console.log('/leaveSession response:' + data);
+			}
+		);
+	}
 }
 
 /*
@@ -127,10 +216,36 @@ function leaveSession() {
 function startSession() {
 	console.log('startSession');
 
-	// hide session buttons
-	$('#start_session').hide();
-	$('#leave_session').hide();
+	if (testing) {
+		// hide session buttons
+		$('#start_session').hide();
+		$('#leave_session').hide();
 
-	// show add song form
-	$('#upload_song_form').show();
+		// show add song form
+		$('#upload_song').show();
+
+		hostingSession = true;
+	} else {
+		/*
+		 request
+		 response
+		  - sessionId
+		  - username
+		 */
+		$.get('/startSession',
+			{},
+			function(data) {
+				console.log('/startSession response:' + data);
+
+				hostingSession = true;
+
+				// hide session buttons
+				$('#start_session').hide();
+				$('#leave_session').hide();
+
+				// show add song form
+				$('#upload_song').show();
+			}
+		);
+	}
 }
