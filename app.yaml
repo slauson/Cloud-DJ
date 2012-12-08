@@ -22,3 +22,6 @@ libraries:
   version: latest
 - name: django
   version: latest
+
+inbound_services:
+- channel_presence

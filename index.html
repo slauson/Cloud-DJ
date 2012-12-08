@@ -35,11 +35,16 @@
 					<h2>Session List</h2>
 					<ul id="sessions"></ul>
 					<div id="upload_song">
-						<form id="upload_song_form" action="/upload" method="POST" enctype="multipart/form-data">
-							<input type="file" name="file">
+						<form id="upload_song_form" action="/update" target="hidden_frame"method="POST" enctype="multipart/form-data">
+							Play own music<input id="upload_song_form_data" type="file" name="data">
+							<input id="upload_song_form_song" class="hidden" type="text" name="song">
+							<!--<input id="upload_song_form_endflag" class="hidden" type="checkbox" name="endflag" checked="true">-->
+							<input id="upload_song_form_session_key" class="hidden" type="text" name="session_key">
 						</form>
 					</div>
 				</div>
+				
+				<iframe id="hidden_frame" class="hidden"></iframe>
 				
 			</div>
 		

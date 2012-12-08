@@ -7,7 +7,7 @@
 /*
  Listener
  */
-function listener(username) {
+function Listener(username) {
 	this.username = username;
 	
 	this.getList = function() {
@@ -18,14 +18,14 @@ function listener(username) {
 /*
  Session
  */
-function session(sessionId, username, title) {
+function Session(sessionId, username, title) {
 	this.sessionId = sessionId;
 	this.username = username;
 	this.title = title;
 	
 	this.getList = function() {
-		return '<li class="pointer" onclick="joinSession(' + this.sessionId + ')">'
-			+ this.title + ' (' + this.username + ')</li>';
+		return '<li onclick="joinSession(' + this.sessionId + ')"><span class="pointer">'
+			+ this.title + ' (' + this.username + ')</span></li>';
 	}
 }
 
@@ -40,11 +40,10 @@ function session(sessionId, username, title) {
  */
 function updateListenerList() {
 	
-	$('#listener_list').empty();
+	$('#listeners').empty();
 	
 	for (idx in listeners) {
-		var listener = listeners[idx];
-		$('#listener_list').append(listener.getList());
+		$('#listeners').append(listeners[idx].getList());
 	}
 }
 
@@ -53,11 +52,10 @@ function updateListenerList() {
  */
 function updateSessionList() {
 
-	$('#session_list').empty();
+	$('#sessions').empty();
 	
 	for (idx in sessions) {
-		var session = sessions[idx];
-		$('#session_list').append(session.getList());
+		$('#sessions').append(sessions[idx].getList());
 	}
 }
 

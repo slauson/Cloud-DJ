@@ -49,6 +49,14 @@
 	float: right;
 }
 
+form {
+	display:inline;
+}
+
+.hidden {
+	visibility: hidden;
+}
+
 .text-large {
 	font-size: 32px;
 }

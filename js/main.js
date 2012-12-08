@@ -29,10 +29,8 @@ function setup() {
 
 	if (!initialized) {
 		// setup handlers
-		$('#leave_session').click(leaveSession);
-		$('#start_session').click(startSession);
 		$('#logout').click(logout);
-		$('#upload_song_form').change(addSong);
+		$('#upload_song_form').change(uploadSong);
 		// session list click handlers will be set up dynamically
 		
 		// setup channel
@@ -56,11 +54,6 @@ function setup() {
 		});
 	}
 	
-	// change visibilities
-	$('#start_session').show();
-	$('#leave_session').hide();
-	$('#upload_song').hide();
-	
 	if (testing) {
 		testSessions();
 	}
@@ -78,6 +71,13 @@ function setup() {
   - endFlag: true if session is being ended
  */
 function handleServerMessage(message) {
+	
+	console.log('handleServerMessage');
+	console.log(message.data);
+
+	// fix weird json encoding issues (http://stackoverflow.com/questions/9036429/convert-object-string-to-json)
+	message = $.parseJSON(JSON.stringify(eval('(' + message.data + ')')));
+
 	// TODO: update session list
 	
 	// update listener list
@@ -89,27 +89,25 @@ function handleServerMessage(message) {
 	updateListenerList();
 	
 	// update current song info (title, url)
-	if (message.song != currentSong.title) {
-		
-		var containsSong = false;
-		
-		// check if we have the song already
-		for (idx in songs) {
-			if (songs[idx].title == message.song && songs[idx].url == message.url) {
-				containsSong = true;
-				break;
-			}
+	var containsSong = false;
+	
+	// check if we have the song already
+	for (idx in songs) {
+		if (songs[idx].title == message.song && songs[idx].url == message.url) {
+			containsSong = true;
+			break;
 		}
+	}
+	
+	// if not, add it to list
+	if (!containsSong) {
+		songs.append(new Song(message.song, message.url, 0));
+		loadSong();
+		updateSongList();
 		
-		// if not, add it to list
-		if (!containsSong) {
-			songs.append(new Song(message.title, message.url, 0));
-			loadSong();
-			
-			// play song immediately if its the only song
-			if (songs.length == 1) {
-				playSong();
-			}
+		// play song immediately if its the only song
+		if (songs.length == 1) {
+			playSong();
 		}
 	}
 	
@@ -124,8 +122,8 @@ function handleServerMessage(message) {
  */
 function testSessions() {
 	
-	var session1 = new session(1, 'song 1', 'user1');
-	var session2 = new session(2, 'song 2', 'user2');
+	var session1 = new Session(1, 'song 1', 'user1');
+	var session2 = new Session(2, 'song 2', 'user2');
 	
 	sessions = new Array();
 	
@@ -139,8 +137,8 @@ function testSessions() {
  Populates listener list with samples
  */
 function testListeners() {
-	var listener1 = new listener('user1');
-	var listener2 = new listener('user2');
+	var listener1 = new Listener('user1');
+	var listener2 = new Listener('user2');
 	
 	listeners = new Array();
 	

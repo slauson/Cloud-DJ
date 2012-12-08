@@ -25,14 +25,9 @@ channelOnMessage = function(message) {
 }
 
 channelOnError = function(error) {
-	console.log('channel error: ' + error);
-	console.log(error);
-	
-	alert("Channel error (check js console)");
+	alert('channel error: ' + error.description + '(' + error.code + ')');
 }
 
 channelOnClose = function() {
 	console.log('channel closed');
-	
-	alert("Channel closed");
 }

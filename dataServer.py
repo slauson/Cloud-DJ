@@ -1,5 +1,6 @@
 import jinja2
 import os
+import logging
 from django.utils import simplejson
 
 from google.appengine.api import channel
@@ -11,6 +12,9 @@ from google.appengine.ext.webapp.util import run_wsgi_app
     
 ###############################################################
 # Session classes and structures
+
+# TODO: figure out why put is failing
+# RequestTooLargeError: The request to API call datastore_v3.Put() was too large.
 
 # Stored data for session
 # Identified by session_key = user.user_id() of host user
@@ -33,7 +37,8 @@ class SessionUpdater():
             'song': self.session.song,
             'host': self.session.host.user_id(),
             'listeners': self.session.listeners,
-            'data': self.session.data,
+            # TODO: we need to send the url for the song data
+            #'data': self.session.data,
             'endFlag': self.session.eFlag
         }
         return simplejson.dumps(sessionUpdate)
@@ -42,6 +47,7 @@ class SessionUpdater():
     def send_update(self):
         message = self.get_session_message()
         channel.send_message(self.session.host.user_id() + self.session.key().id_or_name(), message)
+        logging.info('send_update: ' + str(message))
         # EXTEND: Update all listeners
         for lst in Session.get(self.session.listeners):
             channel.send_message(lst.user_id() + self.session.key().id_or_name(), message)
@@ -60,6 +66,7 @@ class SessionFromRequest():
     def __init__(self, request):
         user = users.get_current_user()
         session_key = request.get('session_key')
+        logging.info('SessionFromRequest session_key:' + str(session_key))
         if user and session_key:
             self.session = Session.get_by_key_name(session_key)
     
@@ -78,6 +85,10 @@ class UpdateSong(webapp.RequestHandler):
             song = self.request.get('song')
             data = self.request.get('data')
             endFlag = self.request.get('endflag')
+            
+            if not endFlag:
+                endFlag = False
+            
             SessionUpdater(session).update_song(song, data, endFlag)
 
 # Request to update the page

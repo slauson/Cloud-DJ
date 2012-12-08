@@ -9,7 +9,8 @@
  Song object (basically a wrapper around soundmanager2's sound object)
  ---------------------------------------
  */
-function song(title, url, position) {
+function Song(title, url, position) {
+	console.log('new Song: ' + title + ', ' + url + ', ' + position);
 	this.title = title;
 	this.url = url;
 	
@@ -96,6 +97,12 @@ function song(title, url, position) {
 	this.isLoading = function() {
 		return this.sound.bytesLoaded > 0 && this.sound.bytesLoaded < this.sound.bytesTotal;
 	}
+	
+	// returns list string
+	this.getList = function() {
+		return '<li>' + this.title + '</li>';
+	}
+	
 }
 
 /*
@@ -172,18 +179,32 @@ function nextSong() {
 	}
 }
 
+/*
+ Updates song list from song array
+ */
+function updateSongList() {
+
+	$('#songs').empty();
+	
+	for (idx in songs) {
+		if (idx != 0) {
+			$('#session_list').append(songs[idx].getList());
+		}
+	}
+}
 
 /*
  Upload song to server
  */
 function uploadSong() {
-	console.log('addSong');
+	console.log('uploadSong');
+	
+	// fill in other args before upload
+	
+	// TODO: this isn't working
+	//$('#upload_song_form_song').val($('#upload_song_form_data').value);
+	$('#upload_song_form_song').val("placeholder");
+	$('#upload_song_form_session_key').val(server_session_key);
 
 	$('#upload_song_form').submit();
-
-	/*
-	 TODO: handle response
-	 - add song
-	 - start playing
-	*/
 }
