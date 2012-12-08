@@ -35,7 +35,7 @@ class MainPage(webapp.RequestHandler):
                               eFlag = False)
             session.put()
         else:
-            # Session exists 
+            # Session exists
             session = Session.get_by_key_name(session_key)
             listeners = Session.get(session.listeners)
             if not session.host and (user not in listeners):
@@ -51,6 +51,7 @@ class MainPage(webapp.RequestHandler):
                                'me': user.user_id(),
                                'session_key': session_key,
                                'session_link': session_link,
+                               # TODO: handle this on client side
                                'initial_message': SessionUpdater(session).get_session_message()
                                }
             template = jinja_environment.get_template('index.html')
@@ -72,7 +73,7 @@ app = webapp.WSGIApplication(
      ('/remove', RemoveListener),
      ('/generate_upload_url', UploadURL),
      ('/upload', UploadSong),
-	 ('/sessions', GetLiveSessions),
+     ('/sessions', GetLiveSessions),
      ('/serve/([^/]+)?', ServeSong),
      ('/test', TestPage)], debug=True)
 

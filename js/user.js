@@ -24,8 +24,8 @@ function Session(sessionId, username, title) {
 	this.title = title;
 	
 	this.getList = function() {
-		return '<li><a href="/?session=' + this.sessionId + '"><span class="pointer">'
-			+ this.title + ' (' + this.username + ')</span></a></li>';
+		return '<li><span class="pointer" onclick="joinSession(\'' + this.sessionId + '\')">' +
+			this.title + ' (' + this.username + ')</span></a></li>';
 	}
 }
 
@@ -54,7 +54,7 @@ function updateSessionList() {
 
 	// request updated session list
 	$.get('/sessions',
-		{'session': server_session_key},
+		{'session_key': server_session_key},
 		function(message) {
 			console.log('/sessions response:' + message);
 
@@ -66,7 +66,7 @@ function updateSessionList() {
 			for (idx in lines) {
 				if (lines[idx].length > 0) {
 					var parts = lines[idx].split(',');
-					sessions.push(new Session(parts[0], parts[0], parts[1]));
+					sessions.push(new Session(parts[1], parts[0], parts[2]));
 				}
 			}
 
@@ -83,7 +83,20 @@ function updateSessionList() {
 
 		}
 	);
+}
 
+function joinSession(sessionId) {
+	console.log('joinSession: ' + sessionId);
+
+	//console.log('redirect to "//?session_key=' + sessionId + '"');
+	var answer = confirm ("Are you sure you want to leave your current session?");
+	
+	if (answer) {
+		hostingSession = false;
+
+		// redirect to other page
+		window.location = '/?session_key=' + sessionId;
+	}
 }
 
 /*

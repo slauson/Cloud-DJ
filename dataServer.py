@@ -81,6 +81,7 @@ class SessionUpdater():
             'play': self.session.play,
             'endFlag': self.session.endFlag
         }
+        logging.info('get_song_message: ' + str(sessionUpdate))
         return simplejson.dumps(sessionUpdate)
     
     # Send the most recently added blob key
@@ -88,6 +89,7 @@ class SessionUpdater():
         sessionUpdate = {
             'newSongKey': str(blob_key)
         }
+        logging.info('get_blob_message: ' + str(sessionUpdate))
         return simplejson.dumps(sessionUpdate)
     ##############
     # Updating the datastore model
@@ -125,7 +127,6 @@ class SessionFromRequest():
     def __init__(self, request):
         user = users.get_current_user()
         session_key = request.get('session_key')
-        logging.info('SessionFromRequest session_key:' + str(session_key))
         if user and session_key:
             self.session = Session.get_by_key_name(session_key)
     
@@ -170,16 +171,19 @@ class RemoveListener(webapp.RequestHandler):
 # /sessions
 class GetLiveSessions(webapp.RequestHandler):
     def get(self):
-            session = SessionFromRequest(self.request).get_session()
+        session = SessionFromRequest(self.request).get_session()
 #           user = users.get_current_user()
-            if session:
-                sessionList = Session.all().filter('endFlag =', False)
-                msg = ""
-                for ses in sessionList:
+        if session:
+            # TODO: filter wasn't returning any results
+            sessionList = Session.all()#.filter('endFlag =', False)
+            msg = ""
+            for ses in sessionList:
+                if ses.curSongIdx < len(ses.playlist):
                     song = Song.get(ses.playlist[ses.curSongIdx])
-                    msg += ses.host + "," + str(song.blob_key) + "\n"
-                self.response.headers['Content-Type'] = 'text/plain'
-                self.response.out.write(msg)
+                    # TODO: change this to host,session_key,filename
+                    msg += str(ses.host) + "," + str(ses.key().name()) + "," + str(song.blob_key.key()) + "\n"
+            self.response.headers['Content-Type'] = 'text/plain'
+            self.response.out.write(msg)
 
 ##########################################
 # Blob related handlers
@@ -216,7 +220,7 @@ class ServeSong(blobstore_handlers.BlobstoreDownloadHandler):
         blob_key = str(urllib.unquote(blob_key))
         
         # TODO: fix this (we can't load upcoming songs if we check the index)
-#		playlist = session.playlist
+#        playlist = session.playlist
 #        idx = session.curSongIdx
 #        song = Song.get(playlist[idx])
 #        if (session.endFlag and session.play and (str(song.blob_key) == blob_key)):
