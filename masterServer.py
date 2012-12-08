@@ -30,6 +30,8 @@ class MainPage(webapp.RequestHandler):
             session_key = user.user_id()
             session = Session(key_name = session_key,   # Key for the db.Model. 
                               host = user,
+                              curSongIdx = 0,
+                              play = False,
                               eFlag = False)
             session.put()
         else:
