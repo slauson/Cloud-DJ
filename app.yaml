@@ -15,7 +15,7 @@ handlers:
   static_dir: css
 
 - url: /.*
-  script: dataServer.app
+  script: masterServer.app
 
 libraries:
 - name: jinja2
