@@ -18,22 +18,15 @@ def ACL_key(user_name=None):
     return db.Key.from_path('ACL', user_name or 'anonymous')
 
 def findACL(user):
-    db.get(ACL(key(user.userid())))
-#     db.GqlQuery("SELECT * "
-#                 "FROM "
-#                 "WHERE ANCESTOR IS :1", 
-#                 ACL_key(user.user_id()))
-    # Comment: 
-    # Ancestor queries, as shown here, are strongly consistent; queries that
-    # span entity groups are only eventually consistent. If we omitted the
-    # ancestor from this query, there would be a slight chance that a greeting
-    # that had just been written would not show up in a query. See example:
-    #     greetings = db.GqlQuery("SELECT * "
-    #                             "FROM Greeting "
-    #                             "WHERE ANCESTOR IS :1 "
-    #                             "ORDER BY date DESC LIMIT 10",
-    #                             guestbook_key(guestbook_name))
+    return db.get(ACL_key(user.user_id()))
 
+
+class LoggedInUsers(db.Model):
+    """
+    Create reverse mapping from emails to user ids
+    (emails are the keys)
+    """
+    userid = db.StringProperty()
 
 class ACLEntry(db.Model):
     """
@@ -45,14 +38,6 @@ class ACLEntry(db.Model):
     plisteners = db.ListProperty(users.User, indexed=False)     # List of users who are allowed to listen to this one 
     psessions  = db.ListProperty(users.User, indexed=False)     # List of users whose session this user can listen to
 
-
-    def create_new(self, user):
-        host = user
-        plisteners = []
-        psessions = []
-
-    def put(self):
-        self.put()
 
     def add(self, host, plistener):
         """ Adds plistener to host's plistener ACL 
@@ -93,13 +78,22 @@ class MainPage(webapp.RequestHandler):
         if not user:
             self.redirect(users.create_login_url(self.request.uri))
             return
-        
-#         ACL = findACL(user)
-#         if (ACL == None):
-#             ACL = ACLEntry()
-#             ACL.create_new()
-#             ACL.put()
 
+        ACL = findACL(user)
+        # if user has no ACL, create one with no listeners and no potential sessions
+        if (ACL == None):
+            ACL = ACLEntry(host = user,
+                           plisteners = [],
+                           psessions = [])
+            ACL.put()
+
+        # ADD USER TO LIST OF LOGGED IN USERS
+        # (so other users can add to listner list
+        addlog = LoggedInUsers(key_name = user.email(),
+                              userid = user.user_id())
+        addlog.put()
+
+            
         if not session_key:
             # No session specified, create a new one, make this the host 
             session_key = user.user_id()
