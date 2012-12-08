@@ -59,7 +59,6 @@ function updateSessionList() {
 	}
 }
 
-
 /*
  Send logout request
  Receive confirmation?

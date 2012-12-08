@@ -167,7 +167,7 @@ class RemoveListener(webapp.RequestHandler):
                 SessionUpdater(session).remove_listener(user)
                 
 # Get all live sessions
-# /sessions    
+# /sessions
 class GetLiveSessions(webapp.RequestHandler):
     def get(self):
             session = SessionFromRequest(self.request).get_session()
@@ -215,11 +215,12 @@ class ServeSong(blobstore_handlers.BlobstoreDownloadHandler):
         session = SessionFromRequest(self.request).get_session()
         blob_key = str(urllib.unquote(blob_key))
         
-        playlist = session.playlist
-        idx = session.curSongIdx
-        song = Song.get(playlist[idx])
-        if (session.endFlag and session.play and (str(song.blob_key) == blob_key)):
-            self.send_blob(blobstore.BlobInfo.get(blob_key))
+        # TODO: fix this (we can't load upcoming songs if we check the index)
+#		playlist = session.playlist
+#        idx = session.curSongIdx
+#        song = Song.get(playlist[idx])
+#        if (session.endFlag and session.play and (str(song.blob_key) == blob_key)):
+        self.send_blob(blobstore.BlobInfo.get(blob_key))
 
 # Request to open the page /open
 class OpenPage(webapp.RequestHandler):
