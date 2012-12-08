@@ -126,9 +126,10 @@ class MainPage(webapp.RequestHandler):
                                'me': user.user_id(),
                                'session_key': session_key,
                                'session_link': session_link,
-                               # TODO: handle this on client side
-                               'initial_message': SessionUpdater(session).get_session_message()
                                }
+            # combine these so that they can be used on the client side
+            template_values.update(SessionUpdater(session).get_session_details())
+
             template = jinja_environment.get_template('index.html')
             self.response.out.write(template.render(template_values))
         else:

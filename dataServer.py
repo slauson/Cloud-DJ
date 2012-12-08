@@ -43,10 +43,9 @@ class SessionUpdater():
         
         for lst in self.session.listeners:
             channel.send_message(lst.user_id() + self.session.key().id_or_name(), message)
-            
-    # Update message for non-incremental updates
-    # Returns entire model  
-    def get_session_message(self):
+
+    # Returns entire session model  
+    def get_session_details(self):
         playlist = self.session.playlist
         idx = self.session.curSongIdx
         sessionUpdate = {
@@ -55,15 +54,18 @@ class SessionUpdater():
             'play': self.session.play,              # Tell the client to play or not
             'endFlag': self.session.endFlag         # Session end or not
         }
-        if playlist and idx:
+        if playlist:
             song = Song.get(playlist[idx])
 #            sessionUpdate['title']= song.title                  # Current song title
 #            sessionUpdate['artist']= song.artist                 # Current song artist
-            sessionUpdate['curSongKey']= str(song.blob_key)        # Current song blob key. Serve url: /serve/blob_key
+            sessionUpdate['curSongKey']= str(song.blob_key.key())        # Current song blob key. Serve url: /serve/blob_key
+        return sessionUpdate
+        
 
-        logging.info('get_session_message: ' + str(sessionUpdate))
-        return simplejson.dumps(sessionUpdate)
-    
+    # Update message for non-incremental updates
+    # Returns entire model  
+    def get_session_message(self):
+        return simplejson.dumps(get_session_details())
     
     # Update song information only
     def get_song_message(self):
@@ -77,7 +79,7 @@ class SessionUpdater():
         sessionUpdate = {
 #            'title': song.title,
 #            'artist': song.artist,
-            'curSongKey': str(song.blob_key),
+            'curSongKey': str(song.blob_key.key()),
             'play': self.session.play,
             'endFlag': self.session.endFlag
         }
@@ -87,6 +89,7 @@ class SessionUpdater():
     # Send the most recently added blob key
     def get_blob_message(self, blob_key):
         sessionUpdate = {
+            # don't use blob.key() here since we pass that in
             'newSongKey': str(blob_key)
         }
         logging.info('get_blob_message: ' + str(sessionUpdate))

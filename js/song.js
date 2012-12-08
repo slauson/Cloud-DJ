@@ -220,7 +220,7 @@ function loadSong() {
 			// return in either case
 			return;
 		}
-	}	
+	}
 }
 
 /*
@@ -236,6 +236,7 @@ function nextSong() {
 		if (songs.length == 0) {
 			if (hostingSession) {
 				alert("Please choose another song to continue your session.");
+				// TODO: send update to server
 			} else {
 				alert("Session host has not chosen the next song.");
 			}

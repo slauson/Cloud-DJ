@@ -65,6 +65,7 @@ function updateSessionList() {
 
 			for (idx in lines) {
 				if (lines[idx].length > 0) {
+					// TODO: don't add own session
 					var parts = lines[idx].split(',');
 					sessions.push(new Session(parts[1], parts[0], parts[2]));
 				}

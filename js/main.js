@@ -41,7 +41,7 @@ function setup() {
 
 		// get upload url
 		getUploadUrl();
-		
+
 		initialized = true;
 	}
 
@@ -53,6 +53,12 @@ function setup() {
 			useFlashBlock: false,
 			onready: function() {
 				console.log('soundmanager loaded');
+
+				// add first song if we have one
+				if (server_session_cur_song_key) {
+					addSong(server_session_cur_song_key);
+				}
+		
 			},
 			ontimeout: function() {
 				alert('Error loading soundmanager');
