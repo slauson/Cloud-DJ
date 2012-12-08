@@ -104,7 +104,7 @@ class SessionUpdater():
         self.send_update(message)
         
     # Add song to playlist
-    def add_song(self, title_, artist_, blob_key_):
+    def add_song(self, blob_key_, title_, artist_):
         song = Song(blob_key = blob_key_,
                     title = title_,
                     artist = artist_)
@@ -189,8 +189,8 @@ class UploadURL(webapp.RequestHandler):
 class UploadSong(blobstore_handlers.BlobstoreUploadHandler):
     def post(self):
         session = SessionFromRequest(self.request).get_session()
-        title = self.get('title')
-        artist = self.get('artist')
+        title = self.request.get('title')
+        artist = self.request.get('artist')
         if (session.host == users.get_current_user()):
             upload_files = self.get_uploads('file')
             blob_info = upload_files[0]

@@ -254,11 +254,12 @@ function uploadSong() {
 	hostingSession = true;
 	
 	// fill in other args before upload
-	$('#upload_song_form_song').val($('#upload_song_form_data').val().replace('C:\\fakepath\\', ''));
+	$('#upload_song_form_title').val($('#upload_song_form_file').val().replace('C:\\fakepath\\', ''));
+	$('#upload_song_form_artist').val($('#upload_song_form_file').val().replace('C:\\fakepath\\', ''));
 	$('#upload_song_form_session_key').val(server_session_key);
 
 	// set file upload action
-	$("#upload_song_form").attr("action", server_upload_url);	
+	//$("#upload_song_form").attr("action", server_upload_url);	
 
 	// do file upload
 	$('#upload_song_form').submit();

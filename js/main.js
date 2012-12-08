@@ -35,6 +35,9 @@ function setup() {
 		
 		// setup channel
 		createChannel();
+
+		// get upload url
+		getUploadUrl();
 		
 		initialized = true;
 	}
@@ -166,6 +169,21 @@ function getTimeStr(seconds) {
 	} else {
 		return '' + minutes + ':' + seconds;
 	}
+}
+
+/*
+ Gets upload URL for uploading file from server and updates form action
+ */
+function getUploadUrl() {
+	$.get('/generate_upload_url',
+		{},
+		function(message) {
+			console.log('/generate_upload_url response:' + message);
+
+			$("#upload_song_form").attr("action", message);
+		}
+	);
+	
 }
 
 // call setup once document is all loaded
