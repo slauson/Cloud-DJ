@@ -98,16 +98,21 @@ function handleServerMessage(message) {
 			break;
 		}
 	}
+
+	// update upload url if we are hosting
+	if (hostingSession && server_upload_url != message.upload_url) {
+		server_upload_url = message.upload_url;
+	}
 	
 	// if not, add it to list
 	if (!containsSong) {
-		songs.append(new Song(message.song, message.url, 0));
+		songs.push(new Song(message.song, message.url, 0));
 		loadSong();
 		updateSongList();
 		
 		// play song immediately if its the only song
 		if (songs.length == 1) {
-			playSong();
+			startSong();
 		}
 	}
 	

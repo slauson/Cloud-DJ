@@ -1,8 +1,11 @@
 import jinja2
 import os
+import urllib
 import logging
 from django.utils import simplejson
 
+from google.appengine.ext import blobstore
+from google.appengine.ext.webapp import blobstore_handlers
 from google.appengine.api import channel
 from google.appengine.api import users
 from google.appengine.ext import db
@@ -23,8 +26,15 @@ class Session(db.Model):
 #    listener = db.UserProperty()    # Listener user
     listeners = db.ListProperty(users.User)    # List of listeners
     song = db.StringProperty()      # Song data
-    data = db.BlobProperty()        # Data 
+#    data = db.BlobProperty()        # Data
+    data = blobstore.BlobReferenceProperty()   # Data
     eFlag = db.BooleanProperty()    # End flag
+
+    def get_url(self):
+        if self.data:
+            return '/song/' + str(self.data.key())
+        else:
+            return ''
     
 class SessionUpdater():
     session = None
@@ -37,10 +47,12 @@ class SessionUpdater():
             'song': self.session.song,
             'host': self.session.host.user_id(),
             'listeners': self.session.listeners,
-            # TODO: we need to send the url for the song data
+            'url': self.session.get_url(),
             #'data': self.session.data,
-            'endFlag': self.session.eFlag
+            'endFlag': self.session.eFlag,
+			'upload_url': blobstore.create_upload_url('/update')
         }
+        logging.info('get_session_message: ' + str(self.session.get_url()))
         return simplejson.dumps(sessionUpdate)
     
     # Update channel clients
@@ -77,13 +89,15 @@ class SessionFromRequest():
 # Handler code
 
 # Make updates to session
-class UpdateSong(webapp.RequestHandler):
+#class UpdateSong(webapp.RequestHandler):
+class UpdateSong(blobstore_handlers.BlobstoreUploadHandler):
     def post(self):
         session = SessionFromRequest(self.request).get_session()
         user = users.get_current_user()
-        if session and user:
+        if user:
+            logging.info(str(self.get_uploads()))
             song = self.request.get('song')
-            data = self.request.get('data')
+            data = self.get_uploads()[0]
             endFlag = self.request.get('endflag')
             
             if not endFlag:
@@ -125,6 +139,9 @@ class MainPage(webapp.RequestHandler):
                 session.put()
         
         session_link = 'http://localhost:8080/?session_key=' + session_key
+
+        # TODO: need to do this after each upload
+        upload_url = blobstore.create_upload_url('/update')
         
         if session:
             token = channel.create_channel(user.user_id() + session_key)
@@ -132,6 +149,7 @@ class MainPage(webapp.RequestHandler):
                                'me': user.user_id(),
                                'session_key': session_key,
                                'session_link': session_link,
+                               'upload_url': upload_url,
                                'initial_message': SessionUpdater(session).get_session_message()
                                }
             template = jinja_environment.get_template('index.html')
@@ -139,18 +157,21 @@ class MainPage(webapp.RequestHandler):
         else:
             self.response.out.write('No existing session')
 
-class TestPage(webapp.RequestHandler):
-    def get(self):
-        template = jinja_environment.get_template('index.html')
-        self.response.out.write(template.render({}))
+# serve song content
+class SongHandler(blobstore_handlers.BlobstoreDownloadHandler):
+    def get(self, resource):
+        resource = str(urllib.unquote(resource))
+        blob_info = blobstore.BlobInfo.get(resource)
+        logging.info('SongHandler: ' + str(blob_info))
+        self.send_blob(blob_info)
 
 jinja_environment = jinja2.Environment(
     loader=jinja2.FileSystemLoader(os.path.dirname(__file__)))
 app = webapp.WSGIApplication(
-	[('/', MainPage),
+    [('/', MainPage),
      ('/open', OpenPage),
      ('/update', UpdateSong),
-	 ('/test', TestPage)], debug=True)
+     ('/song/([^/]+)?', SongHandler)], debug=True)
 
 def main():
     run_wsgi_app(app)
