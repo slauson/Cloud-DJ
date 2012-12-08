@@ -5,6 +5,7 @@
 import jinja2
 import os
 import logging
+import random
 from django.utils import simplejson
 
 from google.appengine.api import channel
@@ -27,7 +28,8 @@ class MainPage(webapp.RequestHandler):
 
         if not session_key:
             # No session specified, create a new one, make this the host 
-            session_key = user.user_id()
+            # session_key = user.user_id()
+            session_key = str(random.randint(0,128))
             session = Session(key_name = session_key,   # Key for the db.Model. 
                               host = user,
                               curSongIdx = 0,
@@ -44,13 +46,15 @@ class MainPage(webapp.RequestHandler):
                 session.put()
 
         session_link = 'http://localhost:8080/?session_key=' + session_key
+        logout_link = users.create_logout_url('/logout')
 
         if session:
-            token = channel.create_channel(user.user_id() + session_key)
+            token = channel.create_channel(user.user_id() + "_" + session_key)
             template_values = {'token': token,
                                'me': user.user_id(),
                                'session_key': session_key,
                                'session_link': session_link,
+                               'logout_link': logout_link,
                                'initial_message': SessionUpdater(session).get_session_message()
                                }
             template = jinja_environment.get_template('index.html')
@@ -68,6 +72,8 @@ jinja_environment = jinja2.Environment(
 app = webapp.WSGIApplication(
     [('/', MainPage),
      ('/open', OpenPage),
+     ('/logout', Logout),
+     ('/_ah/channel/disconnected', ChannelDisconnect),
      ('/update', UpdateChannel),
      ('/remove', RemoveListener),
      ('/generate_upload_url', UploadURL),

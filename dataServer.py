@@ -23,9 +23,8 @@ class Song(db.Model):
 class Session(db.Model):
     host = db.UserProperty()# Host user
     listeners = db.ListProperty(users.User)         # List of listeners
-    plisteners = db.ListProperty(users.User)
     curSongIdx = db.IntegerProperty()               # Index of current song in playlist...
-    playlist = db.ListProperty(db.Key)              # Keys for songs
+    playlist = db.ListProperty(db.Key,indexed=False)              # Keys for songs
     play = db.BooleanProperty()                     # Play or not?
     endFlag = db.BooleanProperty()                  # End flag
         
@@ -119,6 +118,18 @@ class SessionUpdater():
         song.put()
         self.session.playlist.append(song.key())
         self.session.put()
+        
+    def host_disconnect(self):
+        # Mark for deletion
+        self.session.endFlag = True
+        self.session.play = False
+        self.session.put()
+        self.send_update(self.get_session_message())
+        # Delete after 
+        for songKey in self.session.playlist:
+            Song.get(songKey).delete()  # Delete playlist from server
+        self.session.delete()
+
             
 class SessionFromRequest():
     session = None;
@@ -137,6 +148,32 @@ class SessionFromRequest():
 
 ###########################################
 # Session related handlers
+
+# _ah/channel/disconnected
+class ChannelDisconnect(webapp.RequestHandler):
+    def post(self):
+        channel_id = self.request.get('from')
+        channel_id = channel_id.split("_", maxsplit=1)
+        if (len(channel_id) != 2):
+            return
+        user = users.User(_user_id = channel_id[0]) # extract user
+        session_key = channel_id[1] # extract session key
+        session = Session.get_by_key_name(session_key)
+        if (session and user in session.listeners):
+            SessionUpdater(session).remove_listener(user)
+        elif (session and user == session.host):
+            SessionUpdater(session).remove_session()
+            
+# /logout
+class Logout(webapp.RequestHandler):
+    def post(self):
+        user = users.get_current_user()
+        session = SessionFromRequest(self.request).get_session()
+        if (session and user == session.host):
+            SessionUpdater(Session).remove_session()
+        elif (session and user in session.listeners):
+            SessionUpdater(Session).remove_listener(user)
+        self.redirect('/')
 
 # Make updates to session information
 # Message from host
@@ -161,25 +198,25 @@ class UpdateChannel(webapp.RequestHandler):
 # /remove
 class RemoveListener(webapp.RequestHandler):
     def post(self):
-            session = SessionFromRequest(self.request).get_session()
-            user = users.get_current_user()
-            if session and user:
-                SessionUpdater(session).remove_listener(user)
+        session = SessionFromRequest(self.request).get_session()
+        user = users.get_current_user()
+        if session and user:
+            SessionUpdater(session).remove_listener(user)
                 
 # Get all live sessions
 # /sessions    
 class GetLiveSessions(webapp.RequestHandler):
     def get(self):
-            session = SessionFromRequest(self.request).get_session()
+        session = SessionFromRequest(self.request).get_session()
 #           user = users.get_current_user()
-            if session:
-                sessionList = Session.all().filter('endFlag =', False)
-                msg = ""
-                for ses in sessionList:
-                    song = Song.get(ses.playlist[ses.curSongIdx])
-                    msg += ses.host + "," + str(song.blob_key) + "\n"
-                self.response.headers['Content-Type'] = 'text/plain'
-                self.response.out.write(msg)
+        if session:
+            sessionList = Session.all().filter('endFlag =', False)
+            msg = ""
+            for ses in sessionList:
+                song = Song.get(ses.playlist[ses.curSongIdx])
+                msg += ses.host + "," + str(song.blob_key) + "\n"
+            self.response.headers['Content-Type'] = 'text/plain'
+            self.response.out.write(msg)
 
 ##########################################
 # Blob related handlers
@@ -199,7 +236,7 @@ class UploadSong(blobstore_handlers.BlobstoreUploadHandler):
         session = SessionFromRequest(self.request).get_session()
 #        title = self.request.get('title')
 #        artist = self.request.get('artist')
-        if (session.host == users.get_current_user()):
+        if (session and session.host == users.get_current_user()):
             upload_files = self.get_uploads('file')
             blob_info = upload_files[0]
             # add the song to datastore
@@ -218,7 +255,7 @@ class ServeSong(blobstore_handlers.BlobstoreDownloadHandler):
         playlist = session.playlist
         idx = session.curSongIdx
         song = Song.get(playlist[idx])
-        if (session.endFlag and session.play and (str(song.blob_key) == blob_key)):
+        if (session and session.endFlag and session.play and (str(song.blob_key) == blob_key)):
             self.send_blob(blobstore.BlobInfo.get(blob_key))
 
 # Request to open the page /open
