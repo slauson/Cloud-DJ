@@ -35,6 +35,9 @@ function setup() {
 		
 		// setup channel
 		createChannel();
+
+		// get upload url
+		getUploadUrl();
 		
 		initialized = true;
 	}
@@ -98,16 +101,21 @@ function handleServerMessage(message) {
 			break;
 		}
 	}
+
+	// update upload url if we are hosting
+	if (hostingSession && server_upload_url != message.upload_url) {
+		server_upload_url = message.upload_url;
+	}
 	
 	// if not, add it to list
 	if (!containsSong) {
-		songs.append(new Song(message.song, message.url, 0));
+		songs.push(new Song(message.song, message.url, 0));
 		loadSong();
 		updateSongList();
 		
 		// play song immediately if its the only song
 		if (songs.length == 1) {
-			playSong();
+			startSong();
 		}
 	}
 	
@@ -161,6 +169,21 @@ function getTimeStr(seconds) {
 	} else {
 		return '' + minutes + ':' + seconds;
 	}
+}
+
+/*
+ Gets upload URL for uploading file from server and updates form action
+ */
+function getUploadUrl() {
+	$.get('/generate_upload_url',
+		{},
+		function(message) {
+			console.log('/generate_upload_url response:' + message);
+
+			$("#upload_song_form").attr("action", message);
+		}
+	);
+	
 }
 
 // call setup once document is all loaded

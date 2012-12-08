@@ -15,8 +15,8 @@ from google.appengine.ext.webapp import blobstore_handlers
    
 class Song(db.Model):
     blob_key = blobstore.BlobReferenceProperty()
-    artist = db.StringProperty()    # Metadata
-    title = db.StringProperty()     # Metadata
+#    artist = db.StringProperty()    # Metadata
+#    title = db.StringProperty()     # Metadata
     
 # Stored data for session
 # Identified by session_key = user.user_id()+session_key of host user
@@ -37,6 +37,8 @@ class SessionUpdater():
     # Update channel clients with the specified message
     def send_update(self, message):
         #message = self.get_session_message()
+        if not message:
+            return
         channel.send_message(self.session.host.user_id() + self.session.key().id_or_name(), message)
         
         for lst in self.session.listeners:
@@ -53,32 +55,40 @@ class SessionUpdater():
             'play': self.session.play,              # Tell the client to play or not
             'endFlag': self.session.endFlag         # Session end or not
         }
-        if playlist:
+        if playlist and idx:
             song = Song.get(playlist[idx])
-            sessionUpdate['title']= song.title,                    # Current song title
-            sessionUpdate['artist']= song.artist,                  # Current song artist
-            sessionUpdate['curSongKey']= str(song.blob_key),       # Current song blob key. Serve url: /serve/blob_key
-            
+#            sessionUpdate['title']= song.title                  # Current song title
+#            sessionUpdate['artist']= song.artist                 # Current song artist
+            sessionUpdate['curSongKey']= str(song.blob_key)        # Current song blob key. Serve url: /serve/blob_key
+
+        logging.info('get_session_message: ' + str(sessionUpdate))
         return simplejson.dumps(sessionUpdate)
+    
     
     # Update song information only
     def get_song_message(self):
         playlist = self.session.playlist
         idx = self.session.curSongIdx
         
-        if not playlist:
+        if not playlist or not idx:
             return
         
         song = Song.get(playlist[idx])
         sessionUpdate = {
-            'title': song.title,
-            'artist': song.artist,
+#            'title': song.title,
+#            'artist': song.artist,
             'curSongKey': str(song.blob_key),
             'play': self.session.play,
             'endFlag': self.session.endFlag
         }
         return simplejson.dumps(sessionUpdate)
     
+    # Send the most recently added blob key
+    def get_blob_message(self, blob_key):
+        sessionUpdate = {
+            'newSongKey': str(blob_key)
+        }
+        return simplejson.dumps(sessionUpdate)
     ##############
     # Updating the datastore model
     
@@ -104,10 +114,8 @@ class SessionUpdater():
         self.send_update(message)
         
     # Add song to playlist
-    def add_song(self, title_, artist_, blob_key_):
-        song = Song(blob_key = blob_key_,
-                    title = title_,
-                    artist = artist_)
+    def add_song(self, blob_key_):
+        song = Song(blob_key = blob_key_)
         song.put()
         self.session.playlist.append(song.key())
         self.session.put()
@@ -169,7 +177,7 @@ class GetLiveSessions(webapp.RequestHandler):
                 msg = ""
                 for ses in sessionList:
                     song = Song.get(ses.playlist[ses.curSongIdx])
-                    msg += ses.host + "," + song.title +"," + song.artist +"\n"
+                    msg += ses.host + "," + str(song.blob_key) + "\n"
                 self.response.headers['Content-Type'] = 'text/plain'
                 self.response.out.write(msg)
 
@@ -189,13 +197,15 @@ class UploadURL(webapp.RequestHandler):
 class UploadSong(blobstore_handlers.BlobstoreUploadHandler):
     def post(self):
         session = SessionFromRequest(self.request).get_session()
-        title = self.get('title')
-        artist = self.get('artist')
+#        title = self.request.get('title')
+#        artist = self.request.get('artist')
         if (session.host == users.get_current_user()):
             upload_files = self.get_uploads('file')
             blob_info = upload_files[0]
             # add the song to datastore
-            SessionUpdater(session).add_song(blob_info.key(), title, artist)
+            SessionUpdater(session).add_song(blob_info.key())
+            # Send message to everyone in the channel with the new blob key
+            SessionUpdater(session).send_update(SessionUpdater(session).get_blob_message(blob_info.key()))
         
      
 # Serve a song only if the session is valid and if play mode is on
