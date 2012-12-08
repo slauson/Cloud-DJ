@@ -15,10 +15,13 @@ handlers:
   static_dir: css
 
 - url: /.*
-  script: dataServer.app
+  script: masterServer.app
 
 libraries:
 - name: jinja2
   version: latest
 - name: django
   version: latest
+
+inbound_services:
+- channel_presence

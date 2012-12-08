@@ -1,7 +1,13 @@
+
+/*
+ This file contains user related objects/methods.
+ */
+
+
 /*
  Listener
  */
-function listener(username) {
+function Listener(username) {
 	this.username = username;
 	
 	this.getList = function() {
@@ -12,27 +18,32 @@ function listener(username) {
 /*
  Session
  */
-function session(sessionId, title, username) {
+function Session(sessionId, username, title) {
 	this.sessionId = sessionId;
-	this.title = title;
 	this.username = username;
+	this.title = title;
 	
 	this.getList = function() {
-		return '<li class="pointer" onclick="joinSession(' + this.sessionId + ')">'
-			+ this.title + ' (' + this.username + ')</li>';
+		return '<li onclick="joinSession(' + this.sessionId + ')"><span class="pointer">'
+			+ this.title + ' (' + this.username + ')</span></li>';
 	}
 }
+
+/*
+ ---------------------------------------
+ Methods
+ ---------------------------------------
+ */
 
 /*
  Updates listener list from listener array
  */
 function updateListenerList() {
 	
-	$('#listener_list').empty();
+	$('#listeners').empty();
 	
 	for (idx in listeners) {
-		var listener = listeners[idx];
-		$('#listener_list').append(listener.getList());
+		$('#listeners').append(listeners[idx].getList());
 	}
 }
 
@@ -41,11 +52,10 @@ function updateListenerList() {
  */
 function updateSessionList() {
 
-	$('#session_list').empty();
+	$('#sessions').empty();
 	
 	for (idx in sessions) {
-		var session = sessions[idx];
-		$('#session_list').append(session.getList());
+		$('#sessions').append(sessions[idx].getList());
 	}
 }
 
@@ -59,78 +69,42 @@ function updateSessionList() {
 function logout() {
 	console.log('logout');
 	
-	// stop song
-	soundManager.stopAll();
-	$('#song_playback').html('');
-	currentSong.cleanup();
+	stopSong();
 	
-	setup();
+	// clear songs
+	while (songs.length > 0) {
+		songs.pop().cleanup();
+	}
 	
-	// get redirected to login page
+	$.get('/logout',
+		{},
+		function(message) {
+			console.log('/logout response:' + message);
+		}
+	);
 }
 
 /*
- Send session id
- Receive song url, position, listener list
+ Joins existing session
  
  Called by session list click handler
  */
 function joinSession(sessionId) {
 	console.log('joinSession');
 
-	// send request
+	stopSong();
 	
-	// show leave session button
-	$('#leave_session').show();
+	// clear songs
+	while (songs.length > 0) {
+		songs.pop().cleanup();
+	}
 	
-	// hide start session button
-	$('#start_session').hide();
-	
-	// hide add song form
-	$('#upload_song_form').hide();
-	
-	// update song
-	currentSong = new song('15 Step', '/music/15_step.mp3');
-	
-	// update liseners
-	testListeners();
-}
-
-/*
- Send session id
- Receive confirmation?
- 
- Called by leave session button handler
- */
-function leaveSession() {
-	console.log('leaveSession');
-
-	// stop music
-	soundManager.stopAll();
-	$('#song_playback').html('');
-	currentSong.cleanup();
-
-	// clear listeners
-	$('#listener_list').empty();
-	
-	// manage buttons
-	$('#start_session').show();
-	$('#leave_session').hide();
-}
-
-/*
- Send start session request
- Receive confirmation
- 
- Called by start session button handler
- */
-function startSession() {
-	console.log('startSession');
-
-	// hide session buttons
-	$('#start_session').hide();
-	$('#leave_session').hide();
-
-	// show add song form
-	$('#upload_song_form').show();
+	$.get('/joinSession',
+		{sessionId: sessionId},
+		function(message) {
+			console.log('joinSession response:' + message);
+			
+			handleServerMessage(message);
+		}
+	);
 }

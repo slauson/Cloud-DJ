@@ -1,25 +1,54 @@
+
 /*
- Song object
+ This file contains song related objects/methods.
  */
-function song(title, url) {
+
+
+/*
+ ---------------------------------------
+ Song object (basically a wrapper around soundmanager2's sound object)
+ ---------------------------------------
+ */
+function Song(title, url, position) {
+	console.log('new Song: ' + title + ', ' + url + ', ' + position);
 	this.title = title;
 	this.url = url;
 	
 	this.sound = soundManager.createSound({
 		id: title,
 		url: url,
-		autoLoad: true,
-		autoPlay: true,
+		position: position,
+		autoLoad: false,
+		autoPlay: false,
 		onload:function() {
 			console.log(this.id + ' done loading');
+			$('#song_loading').hide();
+			
+			// load next song
+			loadSong();
 		},
 		onfinish:function() {
 			console.log(this.id + ' done playing');
+
+			// hide playback/loading info
+			$('#song_playback').hide();
+			$('#song_loading').hide();
+
+			// go to next song
+			nextSong();
 		},
 		whileloading:function() {
 			console.log(this.id + ' loading (' + this.bytesLoaded + ' / ' + this.bytesTotal + ')');
+
+			// update loading bar/percentage
+			var str = Math.floor((this.bytesLoaded/this.bytesTotal)*100) + '%';
+
+			if (str != $('#song_loading').html) {
+				$('#song_loading').html(str);
+			}
 		},
 		whileplaying:function() {
+			// update time of song
 			var str = getTimeStr(this.position/1000) + ' / ' + getTimeStr(this.duration/1000);
 			
 			if (str != $('#song_playback').html) {
@@ -29,114 +58,153 @@ function song(title, url) {
 		},
 		volume: 50
 	});
+
+	// show playback/loading info
+	$('#song_playback').show();
+	$('#song_loading').show();
+
+	// play song
+	this.play = function() {
+		this.sound.play();
+	}
 	
+	// stop song
+	this.stop = function() {
+		this.sound.stop()
+	}
+	
+	// mute song
+	this.toggleMute = function() {
+		this.sound.toggleMute();
+	}
+	
+	// load song
+	this.load = function() {
+		this.sound.load();
+	}
+
+	// cleanup song
 	this.cleanup = function() {
 		this.sound.destruct();
 	}
-}
-
-function updateSongInfo() {
-	$('#song_title').html(currentSong.title);
-}
-
-/*
- Send song
- Receive confirmation
- 
- Called by add song form handler
- 
- Start playing song
- */
-function addSong() {
-	console.log('addSong');
-
-	// hide add song form
-	$('#upload_song_form').hide();
+	
+	// returns true if song is loaded
+	this.isLoaded = function() {
+		return this.sound.loaded;
+	}
+	
+	// returns true if song is loading
+	this.isLoading = function() {
+		return this.sound.bytesLoaded > 0 && this.sound.bytesLoaded < this.sound.bytesTotal;
+	}
+	
+	// returns list string
+	this.getList = function() {
+		return '<li>' + this.title + '</li>';
+	}
+	
 }
 
 /*
- Send session id
- Receive song url
- 
- Called by song onfinish handler
- 
- Load/play song
+ ---------------------------------------
+ Methods
+ ---------------------------------------
  */
-function getNextSong() {
-	console.log('getNextSong');
 
-	// if host, show upload song form
+/*
+ Start current song
+ */
+function startSong() {
+	if (songs.length > 0) {
+		songs[0].play();
+	}
 }
 
-/*function song(title, basename, numParts) {
-	this.title = title;
-	this.basename = basename;
-	this.numParts = numParts;
-	
-	// last part that's been loaded
-	this.loadPart = -1;
-	
-	// part that's currently playing
-	this.playPart = -1;
-	
-	// array of sounds to play in sequence
-	this.sounds = new Array();
-	
-	// create sounds
-	for (var i = 1; i <= numParts; i++) {
-		var sound = soundManager.createSound({
-			id: basename + '-0' + i,
-			url: '/music/split-audacity/' + basename + '-0' + i + '.mp3',
-			//autoLoad: false,
-			//autoPlay: false,
-			multiShot: false,
-			onload:function() {
-				currentSong.loadNext();
-			},
-			onfinish:function() {
-				currentSong.playNext();
-			},
-			whileplaying:function() {
-				console.log(this.id + ', ' + this.position + ', ' + this.duration);
-			},
-			volume: 50
-		});
-		
-		this.sounds.push(sound);
+/*
+ Stop current song
+ */
+function stopSong() {
+	if (songs.length > 0) {
+		songs[0].stop();
 	}
+}
 
-	this.loadNext = function() {
-		console.log('song loadNext ' + this.loadPart + ' < ' + this.numParts);
-		if (this.loadPart < this.numParts) {
-			this.loadPart++;
-			this.sounds[this.loadPart].load();
-		}
+/*
+ Toggle mute of current song
+ */
+function toggleMuteSong() {
+	if (songs.length > 0) {
+		songs[0].toggleMute();
 	}
-	
-	this.playNext = function() {
-		console.log('song playNext ' + this.playPart + ' < ' + this.numParts);
-		if (this.playPart < this.numParts) {
-			this.playPart++;
-			this.sounds[this.playPart].play();
-		}
-	}
+}
 
-	this.load = function() {
-		console.log('song load');
-		if (this.loadPart == 0) {
-			this.sounds[0].load();
+/*
+ Loads next song if possible
+ */
+function loadSong() {
+	for (idx in songs) {
+		// check if song is not loaded yet
+		if (!songs[idx].isLoaded()) {
+			// start loading if song is not already loading
+			if (!songs[idx].isLoading()) {
+				songs[idx].load();
+			}
+			// return in either case
+			return;
+		}
+	}	
+}
+
+/*
+ Plays next song if possible
+ */
+function nextSong() {
+
+	if (songs.length > 0) {
+	
+		songs.pop().cleanup();
+		
+		// check if song list is empty
+		if (songs.length == 0) {
+			if (hostingSession) {
+				alert("Please choose another song to continue your session.");
+			} else {
+				alert("Session host has not chosen the next song.");
+			}
+		}
+		// otherwise play next song
+		else {
+			songs[0].play();
 		}
 	}
+}
+
+/*
+ Updates song list from song array
+ */
+function updateSongList() {
+
+	$('#songs').empty();
 	
-	this.play = function() {
-		console.log('song play');
-		this.playPart = 0;
-		this.sounds[0].play();
+	for (idx in songs) {
+		if (idx != 0) {
+			$('#session_list').append(songs[idx].getList());
+		}
 	}
+}
+
+/*
+ Upload song to server
+ */
+function uploadSong() {
+	console.log('uploadSong');
 	
-	this.stop = function() {
-		this.sounds[this.playPart].stop();
-		this.playPart = 0;
-	}
-		
-}*/
+	// fill in other args before upload
+	
+	// TODO: this isn't working
+	//$('#upload_song_form_song').val($('#upload_song_form_data').value);
+	$('#upload_song_form_song').val("placeholder");
+	$('#upload_song_form_session_key').val(server_session_key);
+
+	$('#upload_song_form').submit();
+}

@@ -1,7 +1,5 @@
-import jinja2
-import os
 import urllib
-
+import logging
 from django.utils import simplejson
 
 from google.appengine.api import channel
@@ -9,13 +7,12 @@ from google.appengine.api import users
 from google.appengine.ext import db
 from google.appengine.ext import webapp
 from google.appengine.ext import blobstore
-from google.appengine.ext.webapp.util import run_wsgi_app
 from google.appengine.ext.webapp import blobstore_handlers
 
     
 ###############################################################
-# Session classes and structures    
-
+# Session classes and structures 
+   
 class Song(db.Model):
     blob_key = blobstore.BlobReferenceProperty()
     artist = db.StringProperty()    # Metadata
@@ -114,6 +111,7 @@ class SessionFromRequest():
     def __init__(self, request):
         user = users.get_current_user()
         session_key = request.get('session_key')
+        logging.info('SessionFromRequest session_key:' + str(session_key))
         if user and session_key:
             self.session = Session.get_by_key_name(session_key)
     
@@ -140,7 +138,10 @@ class UpdateChannel(webapp.RequestHandler):
                 break
             play = self.request.get('play')
             endFlag = self.request.get('endflag')
-            SessionUpdater(session).update_song(curIdx, play, endFlag)
+            if not endFlag:
+                endFlag = False
+            
+            SessionUpdater(session).update_song(curIdx, play, endFlag) 
 
 # Remove self from listeners
 # /remove
@@ -205,70 +206,4 @@ class OpenPage(webapp.RequestHandler):
     def post(self):
         session = SessionFromRequest(self.request).get_session()
         SessionUpdater(session).send_update()
-
-# Main page /
-class MainPage(webapp.RequestHandler):
-    def get(self):
-        user = users.get_current_user()
-        session_key = self.request.get('session_key')
-        session = None
         
-        if not user:
-            self.redirect(users.create_login_url(self.request.uri))
-            return
-        
-        if not session_key:
-            # No session specified, create a new one, make this the host
-            session_key = user.user_id()
-            session = Session(key_name = session_key,   # Key for the db.Model.
-                              host = user,
-                              endFlag = False)    
-            session.put()
-        else:
-            # Session exists
-            session = Session.get_by_key_name(session_key)
-            listeners = Session.get(session.listeners)
-            if not session.host and (user not in listeners):
-                # User not in listener list
-                listeners.append(user)
-                session.put()
-        
-        # Change this to be our app's link.
-        session_link = 'http://localhost:8080/?session_key=' + session_key
-        
-        if session:
-            token = channel.create_channel(user.user_id() + session_key)
-            # Initial message for when the channel is open on the client
-            template_values = {'token': token, 
-                               'me': user.user_id(),
-                               'session_key': session_key,
-                               'session_link': session_link,
-                               'initial_message': SessionUpdater(session).get_session_message()
-                               }
-            template = jinja_environment.get_template('index.html')
-            self.response.out.write(template.render(template_values))
-        else:
-            self.response.out.write('No existing session')
-
-class TestPage(webapp.RequestHandler):
-    def get(self):
-        template = jinja_environment.get_template('index.html')
-        self.response.out.write(template.render({}))
-
-jinja_environment = jinja2.Environment(
-    loader=jinja2.FileSystemLoader(os.path.dirname(__file__)))
-app = webapp.WSGIApplication(
-	[('/', MainPage),
-     ('/open', OpenPage),
-     ('/update', UpdateChannel),
-     ('/remove', RemoveListener),
-     ('/generate_upload_url', UploadURL),
-     ('/upload', UploadSong),
-     ('/serve/([^/]+)?', ServeSong),
-	 ('/test', TestPage)], debug=True)
-
-def main():
-    run_wsgi_app(app)
-    
-if __name__ == "__main__":
-    main()
