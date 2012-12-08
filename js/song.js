@@ -296,9 +296,15 @@ function addSong(url) {
 function uploadSong() {
 	console.log('uploadSong');
 
+	// if listener, leave session, start new session
+	if (server_session_host != server_me) {
+		// TODO
+	}
+
+	// add another song to playlist
+
 	// fill in other args before upload
-	$('#upload_song_form_title').val($('#upload_song_form_file').val().replace('C:\\fakepath\\', ''));
-	$('#upload_song_form_artist').val($('#upload_song_form_file').val().replace('C:\\fakepath\\', ''));
+	$('#upload_song_form_filename').val($('#upload_song_form_file').val().replace('C:\\fakepath\\', ''));
 	$('#upload_song_form_session_key').val(server_session_key);
 
 	// do file upload
@@ -309,6 +315,4 @@ function uploadSong() {
 
 	// clear filename in input form
 	$('#upload_song_form')[0].reset();
-
-	hostingSession = true;
 }
