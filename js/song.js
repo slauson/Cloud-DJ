@@ -27,7 +27,7 @@ function Song(id, url, index, position) {
 		autoPlay: false,
 		onload:function() {
 			console.log(this.id + ' done loading');
-			$('#song_loading').hide();
+			//$('#song_loading').hide();
 			
 			// load next song
 			loadSong();
@@ -36,8 +36,8 @@ function Song(id, url, index, position) {
 			console.log(this.id + ' done playing');
 
 			// hide playback/loading info
-			$('#song_playback').hide();
-			$('#song_loading').hide();
+			//$('#song_playback').hide();
+			//$('#song_loading').hide();
 
 			// go to next song
 			nextSong();
@@ -46,7 +46,7 @@ function Song(id, url, index, position) {
 			console.log(this.id + ' loading (' + this.bytesLoaded + ' / ' + this.bytesTotal + ')');
 
 			// update loading bar/percentage
-			var str = Math.floor((this.bytesLoaded/this.bytesTotal)*100) + '%';
+			var str = Math.floor((this.bytesLoaded/this.bytesTotal)*100) + '% Loaded';
 
 			if (str != $('#song_loading').html) {
 				$('#song_loading').html(str);
@@ -306,5 +306,8 @@ function uploadSong() {
 	// get new upload url
 	getUploadUrl();
 
-	// TODO: clear filename in input form
+	// clear filename in input form
+	$('#upload_song_form')[0].reset();
+
+	hostingSession = true;
 }

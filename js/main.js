@@ -99,8 +99,6 @@ function handleServerMessage(message) {
 	// fix weird json encoding issues (http://stackoverflow.com/questions/9036429/convert-object-string-to-json)
 	message = $.parseJSON(JSON.stringify(eval('(' + message.data + ')')));
 
-	// TODO: update session list
-
 	host = message.host;
 	
 	// update listener list
