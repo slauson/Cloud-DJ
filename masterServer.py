@@ -18,7 +18,7 @@ def ACL_key(user_name=None):
     return db.Key.from_path('ACL', user_name or 'anonymous')
 
 def findACL(user):
-    db.get(ACL(key(user.userid()))
+    db.get(ACL(key(user.userid())))
 #     db.GqlQuery("SELECT * "
 #                 "FROM "
 #                 "WHERE ANCESTOR IS :1", 
