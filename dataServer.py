@@ -47,22 +47,28 @@ class SessionUpdater():
     def get_session_message(self):
         playlist = self.session.playlist
         idx = self.session.curSongIdx
-        song = Song.get(playlist[idx])
         sessionUpdate = {
             'host': self.session.host.user_id(),
             'listeners': self.session.listeners,
-            'title': song.title,                    # Current song title
-            'artist': song.artist,                  # Current song artist
-            'curSongKey': str(song.blob_key),       # Current song blob key. Serve url: /serve/blob_key
             'play': self.session.play,              # Tell the client to play or not
             'endFlag': self.session.endFlag         # Session end or not
         }
+        if playlist:
+            song = Song.get(playlist[idx])
+            sessionUpdate['title']= song.title,                    # Current song title
+            sessionUpdate['artist']= song.artist,                  # Current song artist
+            sessionUpdate['curSongKey']= str(song.blob_key),       # Current song blob key. Serve url: /serve/blob_key
+            
         return simplejson.dumps(sessionUpdate)
     
     # Update song information only
     def get_song_message(self):
         playlist = self.session.playlist
         idx = self.session.curSongIdx
+        
+        if not playlist:
+            return
+        
         song = Song.get(playlist[idx])
         sessionUpdate = {
             'title': song.title,
@@ -80,7 +86,7 @@ class SessionUpdater():
     # Update song, play, endFlag
     # idx = index into playlist, play = bool, endFlag = bool
     def update_song(self, idx, play, endFlag):
-        self.session.curIdx = idx
+        self.session.curSongIdx = idx
         self.session.play = play
         self.session.endFlag = endFlag
         self.session.put()    
@@ -134,14 +140,14 @@ class UpdateChannel(webapp.RequestHandler):
         user = users.get_current_user()
         if session and user == session.host:
             curIdx = self.request.get('curIdx')   # Index of the current song
-            if (curIdx >= len(session.playlist)):
-                break
-            play = self.request.get('play')
-            endFlag = self.request.get('endflag')
-            if not endFlag:
-                endFlag = False
-            
-            SessionUpdater(session).update_song(curIdx, play, endFlag) 
+            if (curIdx < len(session.playlist)):
+                play = self.request.get('play')
+                endFlag = self.request.get('endflag')
+                if not endFlag:
+                    endFlag = False
+                if not play:
+                    play = True
+                SessionUpdater(session).update_song(curIdx, play, endFlag) 
 
 # Remove self from listeners
 # /remove
@@ -162,7 +168,7 @@ class GetLiveSessions(webapp.RequestHandler):
                 sessionList = Session.all().filter('endFlag =', False)
                 msg = ""
                 for ses in sessionList:
-                    song = Song.get(ses.playlist[ses.curIdx])
+                    song = Song.get(ses.playlist[ses.curSongIdx])
                     msg += ses.host + "," + song.title +"," + song.artist +"\n"
                 self.response.headers['Content-Type'] = 'text/plain'
                 self.response.out.write(msg)
@@ -198,12 +204,16 @@ class ServeSong(blobstore_handlers.BlobstoreDownloadHandler):
     def get(self, blob_key):
         session = SessionFromRequest(self.request).get_session()
         blob_key = str(urllib.unquote(blob_key))
-        if (session.eFlag and session.play and (str(session.curSong) == blob_key)):
+        
+        playlist = session.playlist
+        idx = session.curSongIdx
+        song = Song.get(playlist[idx])
+        if (session.endFlag and session.play and (str(song.blob_key) == blob_key)):
             self.send_blob(blobstore.BlobInfo.get(blob_key))
 
 # Request to open the page /open
 class OpenPage(webapp.RequestHandler):
     def post(self):
         session = SessionFromRequest(self.request).get_session()
-        SessionUpdater(session).send_update()
+        SessionUpdater(session).send_update(SessionUpdater(session).get_session_message())
         
