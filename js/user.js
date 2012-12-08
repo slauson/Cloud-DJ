@@ -24,8 +24,8 @@ function Session(sessionId, username, title) {
 	this.title = title;
 	
 	this.getList = function() {
-		return '<li onclick="joinSession(' + this.sessionId + ')"><span class="pointer">'
-			+ this.title + ' (' + this.username + ')</span></li>';
+		return '<li><a href="/?session=' + this.sessionId + '"><span class="pointer">'
+			+ this.title + ' (' + this.username + ')</span></a></li>';
 	}
 }
 
@@ -52,13 +52,39 @@ function updateListenerList() {
  */
 function updateSessionList() {
 
-	$('#sessions').empty();
-	
-	for (idx in sessions) {
-		$('#sessions').append(sessions[idx].getList());
-	}
-}
+	// request updated session list
+	$.get('/sessions',
+		{'session': server_session_key},
+		function(message) {
+			console.log('/sessions response:' + message);
 
+			sessions = new Array();
+
+			// update sessions
+			var lines = message.split('\n');
+
+			for (idx in lines) {
+				if (lines[idx].length > 0) {
+					var parts = lines[idx].split(',');
+					sessions.push(new Session(parts[0], parts[0], parts[1]));
+				}
+			}
+
+			$('#sessions').empty();
+
+			// no sessions
+			if (sessions.length == 0) {
+				$('#sessions').append('<li>There are no current sessions</li>');
+			} else {
+				for (idx in sessions) {
+					$('#sessions').append(sessions[idx].getList());
+				}
+			}
+
+		}
+	);
+
+}
 
 /*
  Send logout request
@@ -80,31 +106,6 @@ function logout() {
 		{},
 		function(message) {
 			console.log('/logout response:' + message);
-		}
-	);
-}
-
-/*
- Joins existing session
- 
- Called by session list click handler
- */
-function joinSession(sessionId) {
-	console.log('joinSession');
-
-	stopSong();
-	
-	// clear songs
-	while (songs.length > 0) {
-		songs.pop().cleanup();
-	}
-	
-	$.get('/joinSession',
-		{sessionId: sessionId},
-		function(message) {
-			console.log('joinSession response:' + message);
-			
-			handleServerMessage(message);
 		}
 	);
 }

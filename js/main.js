@@ -6,6 +6,9 @@
 // channel for receiving updates from the server
 var channel;
 
+// host of current session
+var host;
+
 // this is a list of songs that the user is/will be listening to
 var songs = new Array();
 
@@ -29,9 +32,9 @@ function setup() {
 
 	if (!initialized) {
 		// setup handlers
+		// TODO: setup logout
 		$('#logout').click(logout);
 		$('#upload_song_form').change(uploadSong);
-		// session list click handlers will be set up dynamically
 		
 		// setup channel
 		createChannel();
@@ -59,6 +62,7 @@ function setup() {
 	
 	if (testing) {
 		testSessions();
+		testListeners();
 	}
 }
 
@@ -72,6 +76,20 @@ function setup() {
   - host: username of host in session
   - TODO: url: url of new song in session
   - endFlag: true if session is being ended
+
+	'host': self.session.host.user_id(),
+	'listeners': self.session.listeners,
+	'title': song.title,                    # Current song title
+	'artist': song.artist,                  # Current song artist
+	'curSongKey': str(song.blob_key),       # Current song blob key. Serve url: /serve/blob_key
+	'play': self.session.play,              # Tell the client to play or not
+	'endFlag': self.session.endFlag         # Session end or not
+
+	'title': song.title,
+	'artist': song.artist,
+	'curSongKey': str(song.blob_key),
+	'play': self.session.play,
+	'endFlag': self.session.endFlag
  */
 function handleServerMessage(message) {
 	
@@ -82,46 +100,31 @@ function handleServerMessage(message) {
 	message = $.parseJSON(JSON.stringify(eval('(' + message.data + ')')));
 
 	// TODO: update session list
+
+	host = message.host;
 	
 	// update listener list
 	// TODO: update incrementally?
-	listeners = new Array();
-	for (idx in message.listeners) {
-		listeners.push(new listener(message.listeners[idx]));
-	}
-	updateListenerList();
-	
-	// update current song info (title, url)
-	var containsSong = false;
-	
-	// check if we have the song already
-	for (idx in songs) {
-		if (songs[idx].title == message.song && songs[idx].url == message.url) {
-			containsSong = true;
-			break;
+	if (message.listeners) {
+		listeners = new Array();
+		for (idx in message.listeners) {
+			listeners.push(new listener(message.listeners[idx]));
 		}
+		updateListenerList();
+	}
+	
+	if (message.curSongKey) {
+		addSong(message.curSongKey);
 	}
 
-	// update upload url if we are hosting
-	if (hostingSession && server_upload_url != message.upload_url) {
-		server_upload_url = message.upload_url;
-	}
-	
-	// if not, add it to list
-	if (!containsSong) {
-		songs.push(new Song(message.song, message.url, 0));
-		loadSong();
-		updateSongList();
-		
-		// play song immediately if its the only song
-		if (songs.length == 1) {
-			startSong();
-		}
+	if (message.newSongKey) {
+		addSong(message.newSongKey);
 	}
 	
 	// session was killed
 	if (message.endFlag) {
 		alert(host + " has ended the session. Please join or start a session.");
+		stopSong();
 	}
 }
 
