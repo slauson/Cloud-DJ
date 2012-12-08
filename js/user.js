@@ -1,3 +1,9 @@
+
+/*
+ This file contains user related objects/methods.
+ */
+
+
 /*
  Listener
  */
@@ -65,187 +71,42 @@ function updateSessionList() {
 function logout() {
 	console.log('logout');
 	
-	// stop song
-	soundManager.stopAll();
-	$('#song_playback').html('');
+	stopSong();
 	
-	if (currentSong) {
-		currentSong.cleanup();
-	}
-
-	if (testing) {
-		setup();
-	} else {
-		/*
-		 request
-		 response
-		 */
-		$.get('/logout',
-			{},
-			function(data) {
-				console.log('/logout response:' + data);
-				alert('/logout response: ' + data);
-			}
-		);
+	// clear songs
+	while (songs.length > 0) {
+		songs.pop().cleanup();
 	}
 	
-	// get redirected to login page
+	$.get('/logout',
+		{},
+		function(message) {
+			console.log('/logout response:' + message);
+		}
+	);
 }
 
 /*
- Send session id
- Receive song url, position, listener list
+ Joins existing session
  
  Called by session list click handler
  */
 function joinSession(sessionId) {
 	console.log('joinSession');
 
-	if (testing) {
-		// update song
-		currentSong = new song('15 Step', '/music/15_step.mp3', 0);
+	stopSong();
 	
-		// update liseners
-		testListeners();
-
-		// update session
-		hostingSession = false;
-		session = new session(sessionId, '15 Step', 'User 1');
-
-		// show leave session button
-		$('#leave_session').show();
-
-		// hide start session button
-		$('#start_session').hide();
-
-		// hide add song form
-		$('#upload_song').hide();
-
-	} else {
-
-		/*
-		 request
-		  - session_id
-		 response
-		  - title
-		  - url
-		  - position
-		  - username
-		  - listeners list
-		 */
-		$.get('/joinSession',
-			{sessionId: sessionId},
-			function(data) {
-				console.log('/joinSession response:' + data);
-
-				// update song
-				currentSong = new song(data.title, data.url, data.position);
-				updateSongInfo();
-
-				// update listeners
-				listeners = new Array();
-				for (idx in data.listeners) {
-					listener = new listener(data.listeners[idx]);
-					listeners.push(listener);
-				}
-
-				// update session
-				hostingSession = false;
-				session = new session(sessionId, data.title, data.username);
-
-				// show leave session button
-				$('#leave_session').show();
-	
-				// hide start session button
-				$('#start_session').hide();
-	
-				// hide add song form
-				$('#upload_song').hide();
-			}
-		);
-
-		// TODO: show loading bar?
-
+	// clear songs
+	while (songs.length > 0) {
+		songs.pop().cleanup();
 	}
-}
-
-/*
- Send session id
- Receive confirmation?
- 
- Called by leave session button handler
- */
-function leaveSession() {
-	console.log('leaveSession');
-
-	// stop music
-	soundManager.stopAll();
-	$('#song_playback').html('');
-	currentSong.cleanup();
-
-	// clear listeners
-	$('#listener_list').empty();
 	
-	// manage buttons
-	$('#start_session').show();
-	$('#leave_session').hide();
-
-	if (testing) {
-		// do nothing
-	} else {
-		/*
-		 request
-		  - session_id
-		 response
-		 */
-		$.get('/leaveSession',
-			{sessionId: sessionId},
-			function(data) {
-				console.log('/leaveSession response:' + data);
-			}
-		);
-	}
-}
-
-/*
- Send start session request
- Receive confirmation
- 
- Called by start session button handler
- */
-function startSession() {
-	console.log('startSession');
-
-	if (testing) {
-		// hide session buttons
-		$('#start_session').hide();
-		$('#leave_session').hide();
-
-		// show add song form
-		$('#upload_song').show();
-
-		hostingSession = true;
-	} else {
-		/*
-		 request
-		 response
-		  - sessionId
-		  - username
-		 */
-		$.get('/startSession',
-			{},
-			function(data) {
-				console.log('/startSession response:' + data);
-
-				hostingSession = true;
-
-				// hide session buttons
-				$('#start_session').hide();
-				$('#leave_session').hide();
-
-				// show add song form
-				$('#upload_song').show();
-			}
-		);
-	}
+	$.get('/joinSession',
+		{sessionId: sessionId},
+		function(message) {
+			console.log('joinSession response:' + message);
+			
+			handleServerMessage(message);
+		}
+	);
 }
