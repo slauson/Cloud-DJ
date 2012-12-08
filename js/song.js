@@ -16,6 +16,8 @@ function Song(id, url, index, position) {
 
 	// index within playlist on server
 	this.index = index;
+
+	parentThis = this;
 	
 	this.sound = soundManager.createSound({
 		id: id,
@@ -66,9 +68,13 @@ function Song(id, url, index, position) {
 				console.log(prop + ': ' + this.id3[prop]);
 			}
 
-			// update properties is song is already playing
+			// update properties if song is already playing
 			if (this.playState == 1) {
-				setProperties();
+				parentThis.setProperties();
+			}
+			// otherwise update up next list
+			else {
+				updateSongList();
 			}
 		},
 		volume: 50
@@ -111,46 +117,50 @@ function Song(id, url, index, position) {
 	
 	// returns list string
 	this.getList = function() {
-		return '<li>' + this.title + '</li>';
+		return '<li>' + this.getTitle() + ' - ' + this.getArtist() + '</li>';
+	}
+
+	this.getTitle = function() {
+		var title = '?';
+
+		if ('TIT2' in this.sound.id3) {
+			title = this.sound.id3['TIT2'];
+		}
+
+		return title;
+	}
+
+	this.getArtist = function() {
+		var artist = '?';
+
+		if ('TPE2' in this.sound.id3) {
+			artist = this.sound.id3['TPE2'];
+		} else if ('TPE1' in this.sound.id3) {
+			artist = this.sound.id3['TPE1'];
+		} else if ('TCOM' in this.sound.id3) {
+			artist = this.sound.id3['TCOM'];
+		}
+
+		return artist;
+	}
+
+	this.getAlbum = function() {
+		var album = '?';
+
+		if ('TALB' in this.sound.id3) {
+			album = this.sound.id3['TALB'];
+		}
+
+		return album;
 	}
 
 	// set song properties
 	this.setProperties = function() {
-		console.log('setProperties');
-		var title = '';
-		var artist = '';
-		var album = '';
+		console.log('setProperties: ' + this.id);
 
-		if (!this.sound.id3) {
-			console.log('setProperties id3 not ready');
-			return;
-		}
-
-		if ('tit2' in this.sound.id3) {
-			title = this.sound.id3['tit2'];
-		}
-
-		if ('tpe2' in this.sound.id3) {
-			artist = this.sound.id3['tpe2'];
-		} else if ('tpe1' in this.sound.id3) {
-			artist = this.sound.id3['tpe1'];
-		} else if ('tcom' in this.sound.id3) {
-			artist = this.sound.id3['tcom'];
-		}
-
-		if ('talb' in this.sound.id3) {
-			album = this.sound.id3['talb'];
-		}
-
-		if (title != '') {
-			$('#song_title').html(title);
-		}
-		if (artist != '') {
-			$('#song_artist').html(artist);
-		}
-		if (album != '') {
-			$('#song_album').html(album);
-		}
+		$('#song_title').html(this.getTitle());
+		$('#song_artist').html(this.getArtist());
+		$('#song_album').html(this.getAlbum());
 	}
 }
 

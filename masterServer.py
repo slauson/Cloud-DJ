@@ -72,6 +72,7 @@ app = webapp.WSGIApplication(
      ('/remove', RemoveListener),
      ('/generate_upload_url', UploadURL),
      ('/upload', UploadSong),
+	 ('/sessions', GetLiveSessions),
      ('/serve/([^/]+)?', ServeSong),
      ('/test', TestPage)], debug=True)
 
