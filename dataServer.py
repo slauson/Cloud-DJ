@@ -40,9 +40,11 @@ class SessionUpdater():
         if not message:
             return
         channel.send_message(self.session.host.user_id() + '_' + self.session.key().id_or_name(), message)
+        logging.info('send_message to ' + str(self.session.host.user_id() + '_' + self.session.key().id_or_name()) + ': ' + str(message))
         
         for lst in self.session.listeners:
             channel.send_message(lst.user_id() + '_' + self.session.key().id_or_name(), message)
+            logging.info('send_message to ' + str(lst.user_id() + '_' + self.session.key().id_or_name()) + ': ' + str(message))
 
     # Update message for non-incremental updates
     # Returns entire model  
@@ -51,11 +53,15 @@ class SessionUpdater():
         idx = self.session.curSongIdx
         sessionUpdate = {
             'host': self.session.host.user_id(),
-			'hostEmail': self.session.host.email(),
-            'listeners': self.session.listeners,
+            'hostEmail': self.session.host.email(),
             'play': self.session.play,              # Tell the client to play or not
             'endFlag': self.session.endFlag         # Session end or not
         }
+        listeners_list = []
+        for listener in self.session.listeners:
+            listeners_list.append(listener.email())
+        sessionUpdate['listeners'] = listeners_list
+
         if playlist:
             song = Song.get(playlist[idx])
 #            sessionUpdate['title']= song.title                  # Current song title

@@ -67,6 +67,9 @@ function setup() {
 
 				// get session details
 				getSessionDetails();
+
+				// get sessions
+				updateSessionList();
 			},
 			ontimeout: function() {
 				alert('Error loading soundmanager');
@@ -113,18 +116,22 @@ function handleServerMessage(message) {
 	
 	// update listener list
 	// TODO: update incrementally?
-	listeners = new Array();
 
-	// only add host if its not us
-	if (hostingIndex == -1 && message.hostEmail && message.hostEmail != server_me_email) {
-		listeners.push(new Listener(message.hostEmail + ' (host)'));
-	}
-	if (message.listeners) {
-		for (idx in message.listeners) {
-			listeners.push(new Listener(message.listeners[idx]));
+	// only update if empty or we have listeners
+	if (listeners.length == 0 || message.listeners) {
+		listeners = new Array();
+
+		// only add host if its not us
+		if (hostingIndex == -1 && message.hostEmail && message.hostEmail != server_me_email) {
+			listeners.push(new Listener(message.hostEmail + ' (host)'));
 		}
+		if (message.listeners) {
+			for (idx in message.listeners) {
+				listeners.push(new Listener(message.listeners[idx]));
+			}
+		}
+		updateListenerList();
 	}
-	updateListenerList();
 
 	
 	if (message.curSongKey) {

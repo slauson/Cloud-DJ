@@ -65,10 +65,12 @@ function updateSessionList() {
 
 			for (idx in lines) {
 				if (lines[idx].length > 0) {
-					// TODO: don't add own session
-					// TODO: limit split to 3
-					var parts = lines[idx].split(',');
-					sessions.push(new Session(parts[1], parts[0], parts[2]));
+					var parts = lines[idx].split(',', 3);
+
+					// only add other sessions
+					if (parts[1] != server_session_key) {
+						sessions.push(new Session(parts[1], parts[0], parts[2]));
+					}
 				}
 			}
 
@@ -76,7 +78,7 @@ function updateSessionList() {
 
 			// no sessions
 			if (sessions.length == 0) {
-				$('#sessions').append('<li>There are no current sessions</li>');
+				$('#sessions').append('<li>There are no other active sessions</li>');
 			} else {
 				for (idx in sessions) {
 					$('#sessions').append(sessions[idx].getList());

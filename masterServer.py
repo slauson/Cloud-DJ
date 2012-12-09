@@ -102,10 +102,11 @@ class MainPage(webapp.RequestHandler):
                 self.response.out.write('Invalid session ' + session_key)
                 return
 
-            listeners = Session.get(session.listeners)
-            if not session.host and (user not in listeners):
+            logging.info('existing session: ' + str(user) + ', ' + str(session.host))
+            if user != session.host and (user not in session.listeners):
+                logging.info('add user ' + str(user.email()) + ' to listeners')
                 # User not in listener list 
-                listeners.append(user)
+                session.listeners.append(user)
                 session.put()
 
         ACL = findACL(user.user_id())
@@ -133,13 +134,16 @@ class MainPage(webapp.RequestHandler):
             token = channel.create_channel(user.user_id() + "_" + session_key)
             template_values = {'token': token,
                                'me': user.user_id(),
-							   'me_email': user.email(),
+                               'me_email': user.email(),
                                'session_key': session_key,
                                'session_link': session_link,
                                'logout_link': logout_link,
                                }
             # combine these so that they can be used on the client side
             #template_values.update(SessionUpdater(session).get_session_details())
+            
+            # send update out when someone joins session
+            #SessionUpdater(session).send_update(SessionUpdater(session).get_session_message())
 
             template = jinja_environment.get_template('index.html')
             self.response.out.write(template.render(template_values))
