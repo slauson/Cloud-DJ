@@ -42,10 +42,9 @@ class SessionUpdater():
         
         for lst in self.session.listeners:
             channel.send_message(lst.user_id() + self.session.key().id_or_name(), message)
-            
-    # Update message for non-incremental updates
-    # Returns entire model  
-    def get_session_message(self):
+
+    # Returns entire session model  
+    def get_session_details(self):
         playlist = self.session.playlist
         idx = self.session.curSongIdx
         sessionUpdate = {
@@ -58,10 +57,14 @@ class SessionUpdater():
             song = Song.get(playlist[idx])
 #            sessionUpdate['title']= song.title                  # Current song title
 #            sessionUpdate['artist']= song.artist                 # Current song artist
-            sessionUpdate['curSongKey']= str(song.blob_key)        # Current song blob key. Serve url: /serve/blob_key
+            sessionUpdate['curSongKey']= str(song.blob_key.key())        # Current song blob key. Serve url: /serve/blob_key
+        return sessionUpdate
+        
 
-        logging.info('get_session_message: ' + str(sessionUpdate))
-        return simplejson.dumps(sessionUpdate)
+    # Update message for non-incremental updates
+    # Returns entire model  
+    def get_session_message(self):
+        return simplejson.dumps(self.get_session_details())
     
     
     # Update song information only
@@ -80,13 +83,16 @@ class SessionUpdater():
             'play': self.session.play,
             'endFlag': self.session.endFlag
         }
+        logging.info('get_song_message: ' + str(sessionUpdate))
         return simplejson.dumps(sessionUpdate)
     
     # Send the most recently added blob key
     def get_blob_message(self, blob_key):
         sessionUpdate = {
+            # don't use blob.key() here since we pass that in
             'newSongKey': str(blob_key)
         }
+        logging.info('get_blob_message: ' + str(sessionUpdate))
         return simplejson.dumps(sessionUpdate)
     ##############
     # Updating the datastore model
@@ -136,7 +142,6 @@ class SessionFromRequest():
     def __init__(self, request):
         user = users.get_current_user()
         session_key = request.get('session_key')
-        logging.info('SessionFromRequest session_key:' + str(session_key))
         if user and session_key:
             self.session = Session.get_by_key_name(session_key)
     
@@ -173,7 +178,6 @@ class Logout(webapp.RequestHandler):
             SessionUpdater(Session).remove_session()
         elif (session and user in session.listeners):
             SessionUpdater(Session).remove_listener(user)
-        self.redirect('/')
 
 # Make updates to session information
 # Message from host
@@ -210,11 +214,14 @@ class GetLiveSessions(webapp.RequestHandler):
         session = SessionFromRequest(self.request).get_session()
 #           user = users.get_current_user()
         if session:
-            sessionList = Session.all().filter('endFlag =', False)
+            # TODO: filter wasn't returning any results
+            sessionList = Session.all()#.filter('endFlag =', False)
             msg = ""
             for ses in sessionList:
-                song = Song.get(ses.playlist[ses.curSongIdx])
-                msg += ses.host + "," + str(song.blob_key) + "\n"
+                if ses.curSongIdx < len(ses.playlist):
+                    song = Song.get(ses.playlist[ses.curSongIdx])
+                    # TODO: change this to host,session_key,filename
+                    msg += str(ses.host) + "," + str(ses.key().name()) + "," + str(song.blob_key.key()) + "\n"
             self.response.headers['Content-Type'] = 'text/plain'
             self.response.out.write(msg)
 
@@ -252,11 +259,12 @@ class ServeSong(blobstore_handlers.BlobstoreDownloadHandler):
         session = SessionFromRequest(self.request).get_session()
         blob_key = str(urllib.unquote(blob_key))
         
-        playlist = session.playlist
-        idx = session.curSongIdx
-        song = Song.get(playlist[idx])
-        if (session and session.endFlag and session.play and (str(song.blob_key) == blob_key)):
-            self.send_blob(blobstore.BlobInfo.get(blob_key))
+        # TODO: fix this (we can't load upcoming songs if we check the index)
+#        playlist = session.playlist
+#        idx = session.curSongIdx
+#        song = Song.get(playlist[idx])
+#        if (session.endFlag and session.play and (str(song.blob_key) == blob_key)):
+        self.send_blob(blobstore.BlobInfo.get(blob_key))
 
 # Request to open the page /open
 class OpenPage(webapp.RequestHandler):

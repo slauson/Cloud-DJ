@@ -9,20 +9,25 @@
  Song object (basically a wrapper around soundmanager2's sound object)
  ---------------------------------------
  */
-function Song(title, url, position) {
-	console.log('new Song: ' + title + ', ' + url + ', ' + position);
-	this.title = title;
+function Song(id, url, index, position) {
+	console.log('new Song: ' + id + ', ' + url + ', ' + index + ', ' + position);
+	this.id = id;
 	this.url = url;
+
+	// index within playlist on server
+	this.index = index;
+
+	parentThis = this;
 	
 	this.sound = soundManager.createSound({
-		id: title,
+		id: id,
 		url: url,
 		position: position,
 		autoLoad: false,
 		autoPlay: false,
 		onload:function() {
 			console.log(this.id + ' done loading');
-			$('#song_loading').hide();
+			//$('#song_loading').hide();
 			
 			// load next song
 			loadSong();
@@ -31,8 +36,8 @@ function Song(title, url, position) {
 			console.log(this.id + ' done playing');
 
 			// hide playback/loading info
-			$('#song_playback').hide();
-			$('#song_loading').hide();
+			//$('#song_playback').hide();
+			//$('#song_loading').hide();
 
 			// go to next song
 			nextSong();
@@ -41,7 +46,7 @@ function Song(title, url, position) {
 			console.log(this.id + ' loading (' + this.bytesLoaded + ' / ' + this.bytesTotal + ')');
 
 			// update loading bar/percentage
-			var str = Math.floor((this.bytesLoaded/this.bytesTotal)*100) + '%';
+			var str = Math.floor((this.bytesLoaded/this.bytesTotal)*100) + '% Loaded';
 
 			if (str != $('#song_loading').html) {
 				$('#song_loading').html(str);
@@ -63,9 +68,13 @@ function Song(title, url, position) {
 				console.log(prop + ': ' + this.id3[prop]);
 			}
 
-			// update properties is song is already playing
+			// update properties if song is already playing
 			if (this.playState == 1) {
-				setProperties();
+				parentThis.setProperties();
+			}
+			// otherwise update up next list
+			else {
+				updateSongList();
 			}
 		},
 		volume: 50
@@ -108,46 +117,50 @@ function Song(title, url, position) {
 	
 	// returns list string
 	this.getList = function() {
-		return '<li>' + this.title + '</li>';
+		return '<li>' + this.getTitle() + ' - ' + this.getArtist() + '</li>';
+	}
+
+	this.getTitle = function() {
+		var title = '?';
+
+		if ('TIT2' in this.sound.id3) {
+			title = this.sound.id3['TIT2'];
+		}
+
+		return title;
+	}
+
+	this.getArtist = function() {
+		var artist = '?';
+
+		if ('TPE2' in this.sound.id3) {
+			artist = this.sound.id3['TPE2'];
+		} else if ('TPE1' in this.sound.id3) {
+			artist = this.sound.id3['TPE1'];
+		} else if ('TCOM' in this.sound.id3) {
+			artist = this.sound.id3['TCOM'];
+		}
+
+		return artist;
+	}
+
+	this.getAlbum = function() {
+		var album = '?';
+
+		if ('TALB' in this.sound.id3) {
+			album = this.sound.id3['TALB'];
+		}
+
+		return album;
 	}
 
 	// set song properties
 	this.setProperties = function() {
-		console.log('setProperties');
-		var title = '';
-		var artist = '';
-		var album = '';
+		console.log('setProperties: ' + this.id);
 
-		if (!this.sound.id3) {
-			console.log('setProperties id3 not ready');
-			return;
-		}
-
-		if ('tit2' in this.sound.id3) {
-			title = this.sound.id3['tit2'];
-		}
-
-		if ('tpe2' in this.sound.id3) {
-			artist = this.sound.id3['tpe2'];
-		} else if ('tpe1' in this.sound.id3) {
-			artist = this.sound.id3['tpe1'];
-		} else if ('tcom' in this.sound.id3) {
-			artist = this.sound.id3['tcom'];
-		}
-
-		if ('talb' in this.sound.id3) {
-			album = this.sound.id3['talb'];
-		}
-
-		if (title != '') {
-			$('#song_title').html(title);
-		}
-		if (artist != '') {
-			$('#song_artist').html(artist);
-		}
-		if (album != '') {
-			$('#song_album').html(album);
-		}
+		$('#song_title').html(this.getTitle());
+		$('#song_artist').html(this.getArtist());
+		$('#song_album').html(this.getAlbum());
 	}
 }
 
@@ -194,6 +207,9 @@ function toggleMuteSong() {
  Loads next song if possible
  */
 function loadSong() {
+
+	// TODO: check for more songs on server
+
 	for (idx in songs) {
 		// check if song is not loaded yet
 		if (!songs[idx].isLoaded()) {
@@ -204,7 +220,7 @@ function loadSong() {
 			// return in either case
 			return;
 		}
-	}	
+	}
 }
 
 /*
@@ -220,6 +236,7 @@ function nextSong() {
 		if (songs.length == 0) {
 			if (hostingSession) {
 				alert("Please choose another song to continue your session.");
+				// TODO: send update to server
 			} else {
 				alert("Session host has not chosen the next song.");
 			}
@@ -246,23 +263,52 @@ function updateSongList() {
 }
 
 /*
+ Adds song to list if we don't already have it
+ */
+function addSong(url) {
+	// update current song info
+	var containsSong = false;
+	// check if we have the song already
+	for (idx in songs) {
+		if (songs[idx].url == url) {
+			containsSong = true;
+			break;
+		}
+	}
+
+	// if not, add it to list
+	if (!containsSong) {
+		// TODO: set id, index
+		songs.push(new Song(url, 'serve/' + url, 0, 0));
+		loadSong();
+		updateSongList();
+		
+		// play song immediately if its the only song
+		if (songs.length == 1) {
+			startSong();
+		}
+	}
+}
+
+/*
  Upload song to server
  */
 function uploadSong() {
 	console.log('uploadSong');
 
-	hostingSession = true;
-	
 	// fill in other args before upload
 	$('#upload_song_form_title').val($('#upload_song_form_file').val().replace('C:\\fakepath\\', ''));
 	$('#upload_song_form_artist').val($('#upload_song_form_file').val().replace('C:\\fakepath\\', ''));
 	$('#upload_song_form_session_key').val(server_session_key);
 
-	// set file upload action
-	//$("#upload_song_form").attr("action", server_upload_url);	
-
 	// do file upload
 	$('#upload_song_form').submit();
 
-	// TODO: clear filename in input form
+	// get new upload url
+	getUploadUrl();
+
+	// clear filename in input form
+	$('#upload_song_form')[0].reset();
+
+	hostingSession = true;
 }
