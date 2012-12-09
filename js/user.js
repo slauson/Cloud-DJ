@@ -116,10 +116,17 @@ function logout() {
 		songs.pop().cleanup();
 	}
 	
-	$.get('/logout',
+	$.post('/logout',
 		{},
 		function(message) {
 			console.log('/logout response:' + message);
 		}
 	);
+	$.post(server_logout_link,
+		{},
+		function(message) {
+			console.log('/logout response:' + message);
+		}
+	);
+	window.location = '/'
 }
