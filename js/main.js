@@ -18,8 +18,6 @@ var listeners = new Array();
 // this is -1 if not hosting, otherwise the playlist index of the current song
 var hostingIndex = -1;
 
-var testing = true;
-
 var initialized = false;
 
 /*
@@ -74,11 +72,6 @@ function setup() {
 				alert('Error loading soundmanager');
 			}
 		});
-	}
-	
-	if (testing) {
-		testSessions();
-		testListeners();
 	}
 }
 
@@ -170,37 +163,6 @@ function getSessionDetails() {
 			handleServerMessage(temp);
 		}
 	);
-}
-
-/*
- Populates session list with samples
- */
-function testSessions() {
-	
-	var session1 = new Session(1, 'song 1', 'user1');
-	var session2 = new Session(2, 'song 2', 'user2');
-	
-	sessions = new Array();
-	
-	sessions.push(session1);
-	sessions.push(session2);
-	
-	updateSessionList();
-}
-
-/*
- Populates listener list with samples
- */
-function testListeners() {
-	var listener1 = new Listener('user1');
-	var listener2 = new Listener('user2');
-	
-	listeners = new Array();
-	
-	listeners.push(listener1);
-	listeners.push(listener2);
-	
-	updateListenerList();
 }
 
 /*
