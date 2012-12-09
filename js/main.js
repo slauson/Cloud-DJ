@@ -15,7 +15,8 @@ var sessions = new Array();
 // this is a list of listeners for current session
 var listeners = new Array();
 
-var testing = true;
+// this is -1 if not hosting, otherwise the playlist index of the current song
+var hostingIndex = -1;
 
 var initialized = false;
 
@@ -66,21 +67,11 @@ function setup() {
 
 				// get session details
 				getSessionDetails();
-				// add first song if we have one
-				//if (server_session_cur_song_key) {
-				//	addSong(server_session_cur_song_key);
-				//}
-		
 			},
 			ontimeout: function() {
 				alert('Error loading soundmanager');
 			}
 		});
-	}
-	
-	if (testing) {
-		testSessions();
-		testListeners();
 	}
 }
 
@@ -117,32 +108,38 @@ function handleServerMessage(message) {
 	// fix weird json encoding issues (http://stackoverflow.com/questions/9036429/convert-object-string-to-json)
 	message = $.parseJSON(JSON.stringify(eval('(' + message.data + ')')));
 
-	// don't need this?
+	// add host to listeners list
 	//host = message.host;
 	
 	// update listener list
 	// TODO: update incrementally?
-	if (message.listeners) {
-		listeners = new Array();
-		for (idx in message.listeners) {
-			listeners.push(new listener(message.listeners[idx]));
-		}
-		updateListenerList();
+	listeners = new Array();
+
+	// only add host if its not us
+	if (hostingIndex == -1 && message.hostEmail && message.hostEmail != server_me_email) {
+		listeners.push(new Listener(message.hostEmail + ' (host)'));
 	}
+	if (message.listeners) {
+		for (idx in message.listeners) {
+			listeners.push(new Listener(message.listeners[idx]));
+		}
+	}
+	updateListenerList();
 
 	
 	if (message.curSongKey) {
-		addSong(message.curSongKey);
+		// check if we have song
+		addSong(message.curSongKey, true);
 	}
 
 	if (message.newSongKey) {
-		addSong(message.newSongKey);
+		addSong(message.newSongKey, false);
 	}
 
     // update upcoming songs
 	if (message.playlist) {
 		for (idx in message.playlist) {
-			addSong(message.playlist[idx]);
+			addSong(message.playlist[idx], false);
 		}
 	}
 	
@@ -166,37 +163,6 @@ function getSessionDetails() {
 			handleServerMessage(temp);
 		}
 	);
-}
-
-/*
- Populates session list with samples
- */
-function testSessions() {
-	
-	var session1 = new Session(1, 'song 1', 'user1');
-	var session2 = new Session(2, 'song 2', 'user2');
-	
-	sessions = new Array();
-	
-	sessions.push(session1);
-	sessions.push(session2);
-	
-	updateSessionList();
-}
-
-/*
- Populates listener list with samples
- */
-function testListeners() {
-	var listener1 = new Listener('user1');
-	var listener2 = new Listener('user2');
-	
-	listeners = new Array();
-	
-	listeners.push(listener1);
-	listeners.push(listener2);
-	
-	updateListenerList();
 }
 
 /*

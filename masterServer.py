@@ -31,7 +31,8 @@ class ACLEntry(db.Model):
     Keeps track for each user who can listen to their sessions (potential listeners) 
     and which sessions the user can listen to (potential sessions) 
     """
-    host       = db.UserProperty()                              # User 
+    host       = db.UserProperty()                       # User 
+    sessionkey = db.StringProperty()                     # user's session key - server can recreate channel ID
     plisteners = db.ListProperty(str, indexed=False)     # List of users who are allowed to listen to this one 
     psessions  = db.ListProperty(str, indexed=False)     # List of users whose session this user can listen to
 
@@ -77,23 +78,6 @@ class MainPage(webapp.RequestHandler):
             self.redirect(users.create_login_url(self.request.uri))
             return
 
-        ACL = findACL(user.user_id())
-        # if user has no ACL, create one with no listeners and no potential sessions
-        if (ACL == None):
-            ACL = ACLEntry(key_name=user.user_id(),
-                           host = user,
-                           plisteners = [],
-                           psessions = [])
-            ACL.put()
-
-        # TODO: remove when user logs out
-        # ADD USER TO LIST OF LOGGED IN USERS
-        # (so other users can add to listner list
-        addlog = LoggedInUsers(key_name = user.email(),
-                              userid = user.user_id())
-        addlog.put()
-
-            
         if not session_key:
             # No session specified, create a new one, make this the host 
             # session_key = user.user_id()
@@ -121,6 +105,24 @@ class MainPage(webapp.RequestHandler):
                 session.put()
                 SessionUpdater(session).send_update(SessionUpdater(session).get_session_message())
 
+        ACL = findACL(user.user_id())
+        # if user has no ACL, create one with no listeners and no potential sessions
+        if (ACL == None):
+            ACL = ACLEntry(key_name=user.user_id(),
+                           host = user,
+                           sessionkey = session_key, 
+                           plisteners = [],
+                           psessions = [])
+            ACL.put()
+
+        # TODO: remove when user logs out
+        # ADD USER TO LIST OF LOGGED IN USERS
+        # (so other users can add to listner list
+        addlog = LoggedInUsers(key_name = user.email(),
+                              userid = user.user_id())
+        addlog.put()
+
+
         session_link = 'http://localhost:8080/?session_key=' + session_key
         logout_link = users.create_logout_url('/')
 
@@ -128,6 +130,7 @@ class MainPage(webapp.RequestHandler):
             token = channel.create_channel(user.user_id() + "_" + session_key)
             template_values = {'token': token,
                                'me': user.user_id(),
+							   'me_email': user.email(),
                                'session_key': session_key,
                                'session_link': session_link,
                                'logout_link': logout_link,
@@ -153,7 +156,7 @@ class AddListener(webapp.RequestHandler):
         email = self.request.get('email') #email of potential listner to add
 
         # see if user is online
-        userid = db.get(email)
+        userid = ACLEntry.get_by_key_name(email)
         if (userid != None):
             # they're online and can be added
             ACLHandler().add(user.user_id, userid)
@@ -166,10 +169,16 @@ class RemoveListener(webapp.RequestHandler):
         email = self.request.get('email') #email of potential listner to add
 
         # see if user is online
-        userid = db.get(email)
-        if (userid != None):
-            # they're online and may be in this users list
-            ACLHandler().remove(user.user_id, userid)
+        if (email != ''): # ignore blank emails
+            userid = db.get(email)
+            if (userid != None):
+                # they're online and may be in this users list
+                ACLHandler().remove(user.user_id, userid)
+# FOR TESTING ONLY:
+#         userid = db.get(email)
+#         if (userid != None):
+#             # they're online and may be in this users list
+#             ACLHandler().remove(user.user_id, userid)
         
 
 class TestPage(webapp.RequestHandler):

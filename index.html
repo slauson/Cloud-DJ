@@ -13,6 +13,7 @@
 		<script type="text/javascript">
 			var server_token = "{{ token }}";
 			var server_me = "{{ me }}";
+			var server_me_email = "{{ me_email }}";
 			var server_session_key = "{{ session_key }}";
 			var server_session_link = "{{ session_link }}";
 			var server_logout_link = "{{ logout_link }}";
@@ -34,12 +35,18 @@
 					<h2>Session List</h2>
 					<ul id="sessions"></ul>
 					<div id="upload_song">
-						<form id="upload_song_form" action="/update" target="hidden_frame"method="POST" enctype="multipart/form-data">
+						<form id="upload_song_form" action="/update" target="hidden_frame" method="POST" enctype="multipart/form-data">
 							Play own music<input id="upload_song_form_file" type="file" name="file">
 							<input id="upload_song_form_filename" class="hidden" type="text" name="filename">
 							<!--<input id="upload_song_form_endflag" class="hidden" type="checkbox" name="endflag" checked="true">-->
 							<input id="upload_song_form_session_key" class="hidden" type="text" name="session_key">
 						</form>
+					</div>
+					<div id="add_user">
+					  <form action="/add_listener" target="hidden_frame" method="post">
+					    <div><textarea name="email" rows="1" cols="40"></textarea></div>
+					    <div><input type="submit" value="Add User"></div>
+					  </form>
 					</div>
 				</div>
 				

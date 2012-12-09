@@ -63,6 +63,7 @@ class SessionUpdater():
         idx = self.session.curSongIdx
         sessionUpdate = {
             'host': self.session.host.user_id(),
+			'hostEmail': self.session.host.email(),
             'listeners': self.session.listeners,
             'play': self.session.play,              # Tell the client to play or not
             'endFlag': self.session.endFlag,         # Session end or not
