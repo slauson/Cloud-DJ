@@ -159,10 +159,10 @@ class AddListener(webapp.RequestHandler):
         email = self.request.get('email') #email of potential listner to add
 
         # see if user is online
-        userid = ACLEntry.get_by_key_name(email)
+        userid = LoggedInUsers.get_by_key_name(email)
         if (userid != None):
             # they're online and can be added
-            ACLHandler().add(user.user_id, userid)
+            ACLHandler().add(user.user_id(), userid)
 
 class RemoveListener(webapp.RequestHandler):
     """
