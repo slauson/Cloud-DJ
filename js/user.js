@@ -117,6 +117,13 @@ function logout() {
 		songs.pop().cleanup();
 	}
 	
+	$.get('/logout',
+		{'session_key': server_session_key},
+		function(message) {
+			console.log('/logout response:' + message);
+		}
+	);
+	
 	$.post(server_logout_link,
 		{},
 		function(message) {
