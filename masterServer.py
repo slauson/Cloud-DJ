@@ -14,27 +14,20 @@ from google.appengine.ext.webapp.util import run_wsgi_app
 
 from dataServer import *
 
-def ACL_key(user_name=None):
-    """ Constructs a key from """
-    return db.Key.from_path('ACL', user_name or 'anonymous')
+# TODO: fix keys to be more standard?
+def ACL_key(user_id):
+    """ Constructs a key from the user id"""
+    return db.Key.from_path('ACL', user_id)
 
-def findACL(user):
-    db.get(ACL_key(user.userid()))
-#     db.GqlQuery("SELECT * "
-#                 "FROM "
-#                 "WHERE ANCESTOR IS :1", 
-#                 ACL_key(user.user_id()))
-    # Comment: 
-    # Ancestor queries, as shown here, are strongly consistent; queries that
-    # span entity groups are only eventually consistent. If we omitted the
-    # ancestor from this query, there would be a slight chance that a greeting
-    # that had just been written would not show up in a query. See example:
-    #     greetings = db.GqlQuery("SELECT * "
-    #                             "FROM Greeting "
-    #                             "WHERE ANCESTOR IS :1 "
-    #                             "ORDER BY date DESC LIMIT 10",
-    #                             guestbook_key(guestbook_name))
+def findACL(userid):
+    return db.get(ACL_key(userid))
 
+class LoggedInUsers(db.Model):
+    """
+    Create reverse mapping from emails to user ids
+    (emails are the keys)
+    """
+    userid = db.StringProperty()
 
 class ACLEntry(db.Model):
     """
@@ -43,28 +36,21 @@ class ACLEntry(db.Model):
     and which sessions the user can listen to (potential sessions) 
     """
     host       = db.UserProperty()                              # User 
-    plisteners = db.ListProperty(users.User, indexed=False)     # List of users who are allowed to listen to this one 
-    psessions  = db.ListProperty(users.User, indexed=False)     # List of users whose session this user can listen to
+    plisteners = db.ListProperty(str, indexed=False)     # List of users who are allowed to listen to this one 
+    psessions  = db.ListProperty(str, indexed=False)     # List of users whose session this user can listen to
 
 
-    def create_new(self, user):
-        host = user
-        plisteners = []
-        psessions = []
-
-    def put(self):
-        self.put()
-
+class ACLHandler():
     def add(self, host, plistener):
         """ Adds plistener to host's plistener ACL 
         and adds host to plistener's psessions ACL.
         For performance, allows duplicates."""
 
-        host_entry = db.get(ACL_key(host.user_id()))
+        host_entry = findACL(host)
         host_entry.plisteners.append(plistener)
         host_entry.put()
 
-        plistener_entry = db.get(ACL_key(plistener.user_id()))
+        plistener_entry = findACL(plistener)
         plistener_entry.psessions.append(host)
         plistener_entry.put()
 
@@ -74,12 +60,12 @@ class ACLEntry(db.Model):
         Accounts for duplicates. """
 
         # TODO: don't put if no change?
-        host_entry = db.get(ACL_key(host.user_id()))
+        host_entry = findACL(host)
         while (plistener in host_entry.plisteners):
             host_entry.plisteners.remove(plistener.user_id())
         host_entry.put()
 
-        plistener_entry = db.get(ACL_key(plistener.user_id()))
+        plistener_entry = findACL(plistener)
         while (host in plistener_entry.psessions):
             plistener_entry.psessions.append(host)
         plistener_entry.put()
@@ -94,13 +80,24 @@ class MainPage(webapp.RequestHandler):
         if not user:
             self.redirect(users.create_login_url(self.request.uri))
             return
-        
-#         ACL = findACL(user)
-#         if (ACL == None):
-#             ACL = ACLEntry()
-#             ACL.create_new()
-#             ACL.put()
 
+        ACL = findACL(user.user_id())
+        # if user has no ACL, create one with no listeners and no potential sessions
+        if (ACL == None):
+            ACL = ACLEntry(key_name=user.user_id(),
+                           host = user,
+                           plisteners = [],
+                           psessions = [])
+            ACL.put()
+
+        # TODO: remove when user logs out
+        # ADD USER TO LIST OF LOGGED IN USERS
+        # (so other users can add to listner list
+        addlog = LoggedInUsers(key_name = user.email(),
+                              userid = user.user_id())
+        addlog.put()
+
+            
         if not session_key:
             # No session specified, create a new one, make this the host 
             # session_key = user.user_id()
@@ -144,6 +141,38 @@ class MainPage(webapp.RequestHandler):
         else:
             self.response.out.write('No existing session')
 
+
+class AddListener(webapp.RequestHandler):
+    """
+    Add (potential) listener to user's ACL list.
+    
+    Client submits e-mail of person to add and 
+    if that user is online, server can add to ACL
+    """
+    def post(self):
+        user = users.get_current_user() # user making request
+        email = self.request.get('email') #email of potential listner to add
+
+        # see if user is online
+        userid = db.get(email)
+        if (userid != None):
+            # they're online and can be added
+            ACLHandler().add(user.user_id, userid)
+
+class RemoveListener(webapp.RequestHandler):
+    """
+    """
+    def post(self):
+        user = users.get_current_user() # user making request
+        email = self.request.get('email') #email of potential listner to add
+
+        # see if user is online
+        userid = db.get(email)
+        if (userid != None):
+            # they're online and may be in this users list
+            ACLHandler().remove(user.user_id, userid)
+        
+
 class TestPage(webapp.RequestHandler):
     def get(self):
         template = jinja_environment.get_template('index.html')
@@ -161,6 +190,7 @@ app = webapp.WSGIApplication(
      ('/remove', RemoveListener),
      ('/generate_upload_url', UploadURL),
      ('/upload', UploadSong),
+     ('/add_listener', AddListener),
      ('/sessions', GetLiveSessions),
      ('/serve/([^/]+)?', ServeSong),
      ('/test', TestPage)], debug=True)
