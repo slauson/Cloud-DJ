@@ -45,8 +45,9 @@ class SessionUpdater():
         for lst in self.session.listeners:
             channel.send_message(lst.user_id() + self.session.key().id_or_name(), message)
 
-    # Returns entire session model  
-    def get_session_details(self):
+    # Update message for non-incremental updates
+    # Returns entire model  
+    def get_session_message(self):
         playlist = self.session.playlist
         idx = self.session.curSongIdx
         sessionUpdate = {
@@ -60,13 +61,13 @@ class SessionUpdater():
 #            sessionUpdate['title']= song.title                  # Current song title
 #            sessionUpdate['artist']= song.artist                 # Current song artist
             sessionUpdate['curSongKey']= str(song.blob_key.key())        # Current song blob key. Serve url: /serve/blob_key
-        return sessionUpdate
-        
+            upcomingSongs = []         # send upcoming playlist so new listeners can load songs
 
-    # Update message for non-incremental updates
-    # Returns entire model  
-    def get_session_message(self):
-        return simplejson.dumps(get_session_details())
+            for i in range(idx+1, len(playlist)):
+                s = Song.get(playlist[i])
+                upcomingSongs.append(str(s.blob_key.key()))
+            sessionUpdate['playlist']= upcomingSongs
+        return sessionUpdate
     
     # Update song information only
     def get_song_message(self):
@@ -236,4 +237,9 @@ class OpenPage(webapp.RequestHandler):
     def post(self):
         session = SessionFromRequest(self.request).get_session()
         SessionUpdater(session).send_update(SessionUpdater(session).get_session_message())
-        
+
+# Returns session info for initial join
+class SessionInfo(webapp.RequestHandler):
+    def get(self):
+        session = SessionFromRequest(self.request).get_session()
+        self.response.out.write(simplejson.dumps(SessionUpdater(session).get_session_message()))

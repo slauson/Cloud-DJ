@@ -128,7 +128,7 @@ class MainPage(webapp.RequestHandler):
                                'session_link': session_link,
                                }
             # combine these so that they can be used on the client side
-            template_values.update(SessionUpdater(session).get_session_details())
+            #template_values.update(SessionUpdater(session).get_session_details())
 
             template = jinja_environment.get_template('index.html')
             self.response.out.write(template.render(template_values))
@@ -146,6 +146,7 @@ app = webapp.WSGIApplication(
     [('/', MainPage),
      ('/open', OpenPage),
      ('/update', UpdateChannel),
+	 ('/info', SessionInfo),
      ('/remove', RemoveListener),
      ('/generate_upload_url', UploadURL),
      ('/upload', UploadSong),

@@ -64,10 +64,12 @@ function setup() {
 			onready: function() {
 				console.log('soundmanager loaded');
 
+				// get session details
+				getSessionDetails();
 				// add first song if we have one
-				if (server_session_cur_song_key) {
-					addSong(server_session_cur_song_key);
-				}
+				//if (server_session_cur_song_key) {
+				//	addSong(server_session_cur_song_key);
+				//}
 		
 			},
 			ontimeout: function() {
@@ -127,6 +129,7 @@ function handleServerMessage(message) {
 		}
 		updateListenerList();
 	}
+
 	
 	if (message.curSongKey) {
 		addSong(message.curSongKey);
@@ -135,12 +138,34 @@ function handleServerMessage(message) {
 	if (message.newSongKey) {
 		addSong(message.newSongKey);
 	}
+
+    // update upcoming songs
+	if (message.playlist) {
+		for (idx in message.playlist) {
+			addSong(message.playlist[idx]);
+		}
+	}
 	
 	// session was killed
 	if (message.endFlag) {
 		alert(server_host + " has ended the session. Please join or start a session.");
 		stopSong();
 	}
+}
+
+function getSessionDetails() {
+	$.get('/info',
+		{'session_key': server_session_key},
+		function(message) {
+			console.log('/open response:' + message);
+
+			// hack to get handleServerMessage method to work
+			var temp = new Object();
+			temp.data = message;
+
+			handleServerMessage(temp);
+		}
+	);
 }
 
 /*
@@ -201,7 +226,6 @@ function getUploadUrl() {
 			$("#upload_song_form").attr("action", message);
 		}
 	);
-	
 }
 
 // call setup once document is all loaded
