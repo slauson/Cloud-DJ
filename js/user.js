@@ -66,6 +66,7 @@ function updateSessionList() {
 			for (idx in lines) {
 				if (lines[idx].length > 0) {
 					// TODO: don't add own session
+					// TODO: limit split to 3
 					var parts = lines[idx].split(',');
 					sessions.push(new Session(parts[1], parts[0], parts[2]));
 				}
@@ -116,12 +117,6 @@ function logout() {
 		songs.pop().cleanup();
 	}
 	
-	$.post('/logout',
-		{},
-		function(message) {
-			console.log('/logout response:' + message);
-		}
-	);
 	$.post(server_logout_link,
 		{},
 		function(message) {

@@ -42,7 +42,7 @@ class SessionUpdater():
         channel.send_message(self.session.host.user_id() + '_' + self.session.key().id_or_name(), message)
         
         for lst in self.session.listeners:
-            channel.send_message(lst.user_id() + self.session.key().id_or_name(), message)
+            channel.send_message(lst.user_id() + '_' + self.session.key().id_or_name(), message)
 
     # Update message for non-incremental updates
     # Returns entire model  
@@ -55,7 +55,7 @@ class SessionUpdater():
             'play': self.session.play,              # Tell the client to play or not
             'endFlag': self.session.endFlag         # Session end or not
         }
-        if playlist and idx:
+        if playlist:
             song = Song.get(playlist[idx])
 #            sessionUpdate['title']= song.title                  # Current song title
 #            sessionUpdate['artist']= song.artist                 # Current song artist
@@ -222,7 +222,7 @@ class GetLiveSessions(webapp.RequestHandler):
             for ses in sessionList:
                 if ses.curSongIdx < len(ses.playlist):
                     song = Song.get(ses.playlist[ses.curSongIdx])
-                    msg += str(ses.host) + "," + str(ses.key().name()) + "," + str(song.filename) + "\n"
+                    msg += str(ses.host.email()) + "," + str(ses.key().name()) + "," + str(song.filename) + "\n"
             self.response.headers['Content-Type'] = 'text/plain'
             self.response.out.write(msg)
 

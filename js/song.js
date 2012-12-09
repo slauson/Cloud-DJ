@@ -45,11 +45,13 @@ function Song(id, url, index, position) {
 		whileloading:function() {
 			console.log(this.id + ' loading (' + this.bytesLoaded + ' / ' + this.bytesTotal + ')');
 
-			// update loading bar/percentage
-			var str = Math.floor((this.bytesLoaded/this.bytesTotal)*100) + '% Loaded';
+			// update loading bar/percentage only if song is currently playing
+			if (this.playState == 1) {
+				var str = Math.floor((this.bytesLoaded/this.bytesTotal)*100) + '% Loaded';
 
-			if (str != $('#song_loading').html) {
-				$('#song_loading').html(str);
+				if (str != $('#song_loading').html) {
+					$('#song_loading').html(str);
+				}
 			}
 		},
 		whileplaying:function() {
@@ -174,6 +176,8 @@ function Song(id, url, index, position) {
  Start current song
  */
 function startSong() {
+	console.log('startSong');
+
 	if (songs.length > 0) {
 		songs[0].play();
 
@@ -213,6 +217,7 @@ function setSongProperties() {
  Loads next song if possible
  */
 function loadSong() {
+	console.log('loadSong');
 
 	// TODO: check for more songs on server
 
@@ -233,6 +238,7 @@ function loadSong() {
  Plays next song if possible
  */
 function nextSong() {
+	console.log('nextSong');
 
 	if (songs.length > 0) {
 	
@@ -302,10 +308,7 @@ function addSong(url) {
 function uploadSong() {
 	console.log('uploadSong');
 
-	// if listener, leave session, start new session
-	if (server_session_host != server_me) {
-		// TODO
-	}
+	// TODO: leave session if currently in someone else's session
 
 	// add another song to playlist
 

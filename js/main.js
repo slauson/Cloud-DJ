@@ -157,7 +157,7 @@ function getSessionDetails() {
 	$.get('/info',
 		{'session_key': server_session_key},
 		function(message) {
-			console.log('/open response:' + message);
+			console.log('/getSessionDetails response:' + message);
 
 			// hack to get handleServerMessage method to work
 			var temp = new Object();

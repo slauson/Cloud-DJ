@@ -88,7 +88,7 @@ class ACLEntry(db.Model):
 class MainPage(webapp.RequestHandler):
     def get(self):
         user = users.get_current_user()
-        session_key = self.request.get('session_key')
+        session_key = str(self.request.get('session_key'))
         session = None
 
         if not user:
@@ -117,6 +117,7 @@ class MainPage(webapp.RequestHandler):
 
             if not session:
                 self.response.out.write('Invalid session ' + session_key)
+                return
 
             listeners = Session.get(session.listeners)
             if not session.host and (user not in listeners):
