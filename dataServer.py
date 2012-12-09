@@ -39,7 +39,7 @@ class SessionUpdater():
         #message = self.get_session_message()
         if not message:
             return
-        channel.send_message(self.session.host.user_id() + self.session.key().id_or_name(), message)
+        channel.send_message(self.session.host.user_id() + '_' + self.session.key().id_or_name(), message)
         
         for lst in self.session.listeners:
             channel.send_message(lst.user_id() + self.session.key().id_or_name(), message)
