@@ -42,8 +42,7 @@
 					<div id="upload_song">
 						<form id="upload_song_form" action="/update" target="hidden_frame"method="POST" enctype="multipart/form-data">
 							Play own music<input id="upload_song_form_file" type="file" name="file">
-							<input id="upload_song_form_title" class="hidden" type="text" name="title">
-							<input id="upload_song_form_artist" class="hidden" type="text" name="artist">
+							<input id="upload_song_form_filename" class="hidden" type="text" name="filename">
 							<!--<input id="upload_song_form_endflag" class="hidden" type="checkbox" name="endflag" checked="true">-->
 							<input id="upload_song_form_session_key" class="hidden" type="text" name="session_key">
 						</form>
@@ -66,6 +65,7 @@
 						<div id="song_album">Album</div></br>
 						<div id="song_playback"></div></br>
 						<div id="song_loading"></div></br>
+						<button id="toggle_mute">Toggle Mute</button></br>
 						<hr></br>
 					</div>
 				</div>

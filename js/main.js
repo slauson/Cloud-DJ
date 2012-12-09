@@ -6,9 +6,6 @@
 // channel for receiving updates from the server
 var channel;
 
-// host of current session
-var host;
-
 // this is a list of songs that the user is/will be listening to
 var songs = new Array();
 
@@ -18,12 +15,24 @@ var sessions = new Array();
 // this is a list of listeners for current session
 var listeners = new Array();
 
-// true if user is hosting a session
-var hostingSession = false;
-
 var testing = true;
 
 var initialized = false;
+
+/*
+
+variables passed on page load
+
+var server_token = "{{ token }}";
+var server_me = "{{ me }}";
+var server_session_key = "{{ session_key }}";
+var server_session_link = "{{ session_link }}";
+var server_session_host = "{{ host }}";
+var server_session_listeners = "{{ listeners }}";
+var server_session_play = "{{ play }}";
+var server_session_end_flag = "{{ endFlag }}";
+var server_session_cur_song_key = "{{ curSongKey }}";
+ */
 
 /*
  Sets stuff up once the document is fully loaded
@@ -35,6 +44,7 @@ function setup() {
 		// TODO: setup logout
 		$('#logout').click(logout);
 		$('#upload_song_form').change(uploadSong);
+		$('#toggle_mute').click(toggleMuteSong);
 		
 		// setup channel
 		createChannel();
@@ -105,7 +115,8 @@ function handleServerMessage(message) {
 	// fix weird json encoding issues (http://stackoverflow.com/questions/9036429/convert-object-string-to-json)
 	message = $.parseJSON(JSON.stringify(eval('(' + message.data + ')')));
 
-	host = message.host;
+	// don't need this?
+	//host = message.host;
 	
 	// update listener list
 	// TODO: update incrementally?
@@ -127,7 +138,7 @@ function handleServerMessage(message) {
 	
 	// session was killed
 	if (message.endFlag) {
-		alert(host + " has ended the session. Please join or start a session.");
+		alert(server_host + " has ended the session. Please join or start a session.");
 		stopSong();
 	}
 }

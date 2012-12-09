@@ -15,6 +15,7 @@ from google.appengine.ext.webapp import blobstore_handlers
    
 class Song(db.Model):
     blob_key = blobstore.BlobReferenceProperty()
+    filename = db.StringProperty()    # Metadata
 #    artist = db.StringProperty()    # Metadata
 #    title = db.StringProperty()     # Metadata
     
@@ -119,8 +120,9 @@ class SessionUpdater():
         self.send_update(message)
         
     # Add song to playlist
-    def add_song(self, blob_key_):
-        song = Song(blob_key = blob_key_)
+    def add_song(self, blob_key_, filename_):
+        logging.info('add_song(' + str(blob_key_) + ', ' + str(filename_))
+        song = Song(blob_key = blob_key_, filename = filename_)
         song.put()
         self.session.playlist.append(song.key())
         self.session.put()
@@ -220,8 +222,7 @@ class GetLiveSessions(webapp.RequestHandler):
             for ses in sessionList:
                 if ses.curSongIdx < len(ses.playlist):
                     song = Song.get(ses.playlist[ses.curSongIdx])
-                    # TODO: change this to host,session_key,filename
-                    msg += str(ses.host) + "," + str(ses.key().name()) + "," + str(song.blob_key.key()) + "\n"
+                    msg += str(ses.host) + "," + str(ses.key().name()) + "," + str(song.filename) + "\n"
             self.response.headers['Content-Type'] = 'text/plain'
             self.response.out.write(msg)
 
@@ -241,13 +242,14 @@ class UploadURL(webapp.RequestHandler):
 class UploadSong(blobstore_handlers.BlobstoreUploadHandler):
     def post(self):
         session = SessionFromRequest(self.request).get_session()
+        filename = self.request.get('filename')
 #        title = self.request.get('title')
 #        artist = self.request.get('artist')
         if (session and session.host == users.get_current_user()):
             upload_files = self.get_uploads('file')
             blob_info = upload_files[0]
             # add the song to datastore
-            SessionUpdater(session).add_song(blob_info.key())
+            SessionUpdater(session).add_song(blob_info.key(), filename)
             # Send message to everyone in the channel with the new blob key
             SessionUpdater(session).send_update(SessionUpdater(session).get_blob_message(blob_info.key()))
         
