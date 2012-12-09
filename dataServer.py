@@ -24,9 +24,8 @@ class Song(db.Model):
 class Session(db.Model):
     host = db.UserProperty()# Host user
     listeners = db.ListProperty(users.User)         # List of listeners
-    plisteners = db.ListProperty(users.User)
     curSongIdx = db.IntegerProperty()               # Index of current song in playlist...
-    playlist = db.ListProperty(db.Key)              # Keys for songs
+    playlist = db.ListProperty(db.Key,indexed=False)              # Keys for songs
     play = db.BooleanProperty()                     # Play or not?
     endFlag = db.BooleanProperty()                  # End flag
         
@@ -45,8 +44,9 @@ class SessionUpdater():
         for lst in self.session.listeners:
             channel.send_message(lst.user_id() + self.session.key().id_or_name(), message)
 
-    # Returns entire session model  
-    def get_session_details(self):
+    # Update message for non-incremental updates
+    # Returns entire model  
+    def get_session_message(self):
         playlist = self.session.playlist
         idx = self.session.curSongIdx
         sessionUpdate = {
@@ -55,18 +55,18 @@ class SessionUpdater():
             'play': self.session.play,              # Tell the client to play or not
             'endFlag': self.session.endFlag         # Session end or not
         }
-        if playlist:
+        if playlist and idx:
             song = Song.get(playlist[idx])
 #            sessionUpdate['title']= song.title                  # Current song title
 #            sessionUpdate['artist']= song.artist                 # Current song artist
             sessionUpdate['curSongKey']= str(song.blob_key.key())        # Current song blob key. Serve url: /serve/blob_key
-        return sessionUpdate
-        
+            upcomingSongs = []         # send upcoming playlist so new listeners can load songs
 
-    # Update message for non-incremental updates
-    # Returns entire model  
-    def get_session_message(self):
-        return simplejson.dumps(get_session_details())
+            for i in range(idx+1, len(playlist)):
+                s = Song.get(playlist[i])
+                upcomingSongs.append(str(s.blob_key.key()))
+            sessionUpdate['playlist']= upcomingSongs
+        return sessionUpdate
     
     # Update song information only
     def get_song_message(self):
@@ -80,7 +80,7 @@ class SessionUpdater():
         sessionUpdate = {
 #            'title': song.title,
 #            'artist': song.artist,
-            'curSongKey': str(song.blob_key.key()),
+            'curSongKey': str(song.blob_key),
             'play': self.session.play,
             'endFlag': self.session.endFlag
         }
@@ -126,6 +126,18 @@ class SessionUpdater():
         song.put()
         self.session.playlist.append(song.key())
         self.session.put()
+        
+    def host_disconnect(self):
+        # Mark for deletion
+        self.session.endFlag = True
+        self.session.play = False
+        self.session.put()
+        self.send_update(self.get_session_message())
+        # Delete after 
+        for songKey in self.session.playlist:
+            Song.get(songKey).delete()  # Delete playlist from server
+        self.session.delete()
+
             
 class SessionFromRequest():
     session = None;
@@ -143,6 +155,31 @@ class SessionFromRequest():
 
 ###########################################
 # Session related handlers
+
+# _ah/channel/disconnected
+class ChannelDisconnect(webapp.RequestHandler):
+    def post(self):
+        channel_id = self.request.get('from')
+        channel_id = channel_id.split("_", maxsplit=1)
+        if (len(channel_id) != 2):
+            return
+        user = users.User(_user_id = channel_id[0]) # extract user
+        session_key = channel_id[1] # extract session key
+        session = Session.get_by_key_name(session_key)
+        if (session and user in session.listeners):
+            SessionUpdater(session).remove_listener(user)
+        elif (session and user == session.host):
+            SessionUpdater(session).remove_session()
+            
+# /logout
+class Logout(webapp.RequestHandler):
+    def post(self):
+        user = users.get_current_user()
+        session = SessionFromRequest(self.request).get_session()
+        if (session and user == session.host):
+            SessionUpdater(Session).remove_session()
+        elif (session and user in session.listeners):
+            SessionUpdater(Session).remove_listener(user)
 
 # Make updates to session information
 # Message from host
@@ -167,13 +204,13 @@ class UpdateChannel(webapp.RequestHandler):
 # /remove
 class RemoveListener(webapp.RequestHandler):
     def post(self):
-            session = SessionFromRequest(self.request).get_session()
-            user = users.get_current_user()
-            if session and user:
-                SessionUpdater(session).remove_listener(user)
+        session = SessionFromRequest(self.request).get_session()
+        user = users.get_current_user()
+        if session and user:
+            SessionUpdater(session).remove_listener(user)
                 
 # Get all live sessions
-# /sessions
+# /sessions    
 class GetLiveSessions(webapp.RequestHandler):
     def get(self):
         session = SessionFromRequest(self.request).get_session()
@@ -208,7 +245,7 @@ class UploadSong(blobstore_handlers.BlobstoreUploadHandler):
         filename = self.request.get('filename')
 #        title = self.request.get('title')
 #        artist = self.request.get('artist')
-        if (session.host == users.get_current_user()):
+        if (session and session.host == users.get_current_user()):
             upload_files = self.get_uploads('file')
             blob_info = upload_files[0]
             # add the song to datastore
@@ -236,4 +273,9 @@ class OpenPage(webapp.RequestHandler):
     def post(self):
         session = SessionFromRequest(self.request).get_session()
         SessionUpdater(session).send_update(SessionUpdater(session).get_session_message())
-        
+
+# Returns session info for initial join
+class SessionInfo(webapp.RequestHandler):
+    def get(self):
+        session = SessionFromRequest(self.request).get_session()
+        self.response.out.write(simplejson.dumps(SessionUpdater(session).get_session_message()))

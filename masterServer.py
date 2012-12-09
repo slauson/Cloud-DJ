@@ -3,6 +3,7 @@
 import jinja2
 import os
 import logging
+import random
 from django.utils import simplejson
 
 from google.appengine.api import channel
@@ -17,9 +18,6 @@ from dataServer import *
 def ACL_key(user_id):
     """ Constructs a key from the user id"""
     return db.Key.from_path('ACL', user_id)
-
-#def findACL(user):
-#    return db.get(ACL_key(user.user_id()))
 
 def findACL(userid):
     return db.get(ACL_key(userid))
@@ -102,7 +100,8 @@ class MainPage(webapp.RequestHandler):
             
         if not session_key:
             # No session specified, create a new one, make this the host 
-            session_key = user.user_id()
+            # session_key = user.user_id()
+            session_key = str(random.randint(0,128))
             session = Session(key_name = session_key,   # Key for the db.Model. 
                               host = user,
                               curSongIdx = 0,
@@ -110,7 +109,7 @@ class MainPage(webapp.RequestHandler):
                               eFlag = False)
             session.put()
         else:
-            # Session exists
+            # Session exists 
             session = Session.get_by_key_name(session_key)
             listeners = Session.get(session.listeners)
             if not session.host and (user not in listeners):
@@ -119,16 +118,18 @@ class MainPage(webapp.RequestHandler):
                 session.put()
 
         session_link = 'http://localhost:8080/?session_key=' + session_key
+        logout_link = users.create_logout_url('/')
 
         if session:
-            token = channel.create_channel(user.user_id() + session_key)
+            token = channel.create_channel(user.user_id() + "_" + session_key)
             template_values = {'token': token,
                                'me': user.user_id(),
                                'session_key': session_key,
                                'session_link': session_link,
+                               'logout_link': logout_link,
                                }
             # combine these so that they can be used on the client side
-            template_values.update(SessionUpdater(session).get_session_details())
+            #template_values.update(SessionUpdater(session).get_session_details())
 
             template = jinja_environment.get_template('index.html')
             self.response.out.write(template.render(template_values))
@@ -177,7 +178,10 @@ jinja_environment = jinja2.Environment(
 app = webapp.WSGIApplication(
     [('/', MainPage),
      ('/open', OpenPage),
+     ('/logout', Logout),
+     ('/_ah/channel/disconnected', ChannelDisconnect),
      ('/update', UpdateChannel),
+	 ('/info', SessionInfo),
      ('/remove', RemoveListener),
      ('/generate_upload_url', UploadURL),
      ('/upload', UploadSong),

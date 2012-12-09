@@ -16,8 +16,6 @@ function Song(id, url, index, position) {
 
 	// index within playlist on server
 	this.index = index;
-
-	parentThis = this;
 	
 	this.sound = soundManager.createSound({
 		id: id,
@@ -40,6 +38,8 @@ function Song(id, url, index, position) {
 			//$('#song_loading').hide();
 
 			// go to next song
+
+			// wait for host update before going to next song
 			nextSong();
 		},
 		whileloading:function() {
@@ -70,7 +70,7 @@ function Song(id, url, index, position) {
 
 			// update properties if song is already playing
 			if (this.playState == 1) {
-				parentThis.setProperties();
+				setSongProperties();
 			}
 			// otherwise update up next list
 			else {
@@ -200,6 +200,12 @@ function stopSong() {
 function toggleMuteSong() {
 	if (songs.length > 0) {
 		songs[0].toggleMute();
+	}
+}
+
+function setSongProperties() {
+	if (songs.length > 0) {
+		songs[0].setProperties();
 	}
 }
 
