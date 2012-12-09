@@ -17,12 +17,6 @@ import string
 from dataServer import *
 
 # TODO: fix keys to be more standard?
-def ACL_key(user_id):
-    """ Constructs a key from the user id"""
-    return db.Key.from_path('ACL', user_id)
-
-def findACL(userid):
-    return db.get(ACL_key(userid))
 
 class LoggedInUsers(db.Model):
     """
@@ -88,11 +82,13 @@ class MainPage(webapp.RequestHandler):
             # No session specified, create a new one, make this the host 
             # session_key = user.user_id()
             session_key = session_key_gen()
+            curTime = datetime.now()
             session = Session(key_name = session_key,   # Key for the db.Model. 
                               host = user,
                               curSongIdx = 0,
                               play = False,
-                              eFlag = False)
+                              eFlag = False,
+                              timestamp = curTime)
             session.put()
         else:
             # Session exists 
@@ -108,6 +104,7 @@ class MainPage(webapp.RequestHandler):
                 # User not in listener list 
                 session.listeners.append(user)
                 session.put()
+                SessionUpdater(session).send_update(SessionUpdater(session).get_session_message())
 
         ACL = findACL(user.user_id())
         # if user has no ACL, create one with no listeners and no potential sessions
@@ -163,7 +160,7 @@ class AddListener(webapp.RequestHandler):
         email = self.request.get('email') #email of potential listner to add
 
         # see if user is online
-        userid = db.get(email)
+        userid = ACLEntry.get_by_key_name(email)
         if (userid != None):
             # they're online and can be added
             ACLHandler().add(user.user_id, userid)
@@ -176,10 +173,16 @@ class RemoveListener(webapp.RequestHandler):
         email = self.request.get('email') #email of potential listner to add
 
         # see if user is online
-        userid = db.get(email)
-        if (userid != None):
-            # they're online and may be in this users list
-            ACLHandler().remove(user.user_id, userid)
+        if (email != ''): # ignore blank emails
+            userid = db.get(email)
+            if (userid != None):
+                # they're online and may be in this users list
+                ACLHandler().remove(user.user_id, userid)
+# FOR TESTING ONLY:
+#         userid = db.get(email)
+#         if (userid != None):
+#             # they're online and may be in this users list
+#             ACLHandler().remove(user.user_id, userid)
         
 
 class TestPage(webapp.RequestHandler):
