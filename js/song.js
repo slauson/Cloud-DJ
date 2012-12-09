@@ -9,14 +9,11 @@
  Song object (basically a wrapper around soundmanager2's sound object)
  ---------------------------------------
  */
-function Song(id, url, index, position) {
-	console.log('new Song: ' + id + ', ' + url + ', ' + index + ', ' + position);
+function Song(id, url, position) {
+	console.log('new Song: ' + id + ', ' + url + ', ' + position);
 	this.id = id;
 	this.url = url;
 
-	// index within playlist on server
-	this.index = index;
-	
 	this.sound = soundManager.createSound({
 		id: id,
 		url: url,
@@ -123,7 +120,7 @@ function Song(id, url, index, position) {
 	}
 
 	this.getTitle = function() {
-		var title = '?';
+		var title = 'Unknown Title';
 
 		if ('TIT2' in this.sound.id3) {
 			title = this.sound.id3['TIT2'];
@@ -133,7 +130,7 @@ function Song(id, url, index, position) {
 	}
 
 	this.getArtist = function() {
-		var artist = '?';
+		var artist = 'Unknown Artist';
 
 		if ('TPE2' in this.sound.id3) {
 			artist = this.sound.id3['TPE2'];
@@ -147,7 +144,7 @@ function Song(id, url, index, position) {
 	}
 
 	this.getAlbum = function() {
-		var album = '?';
+		var album = 'Unknown Album';
 
 		if ('TALB' in this.sound.id3) {
 			album = this.sound.id3['TALB'];
@@ -241,12 +238,11 @@ function nextSong() {
 	console.log('nextSong');
 
 	if (songs.length > 0) {
-	
 		songs.pop().cleanup();
 		
 		// check if song list is empty
 		if (songs.length == 0) {
-			if (hostingSession) {
+			if (hostingIndex != -1) {
 				alert("Please choose another song to continue your session.");
 				// TODO: send update to server
 			} else {
@@ -255,6 +251,10 @@ function nextSong() {
 		}
 		// otherwise play next song
 		else {
+
+			if (hostingIndex != -1) {
+				updateChannel();
+			}
 			startSong();
 		}
 	}
@@ -277,7 +277,7 @@ function updateSongList() {
 /*
  Adds song to list if we don't already have it
  */
-function addSong(url) {
+function addSong(url, forcePlay) {
 	// update current song info
 	var containsSong = false;
 	// check if we have the song already
@@ -290,8 +290,7 @@ function addSong(url) {
 
 	// if not, add it to list
 	if (!containsSong) {
-		// TODO: set id, index
-		songs.push(new Song(url, 'serve/' + url, 0, 0));
+		songs.push(new Song(url, 'serve/' + url, 0));
 		loadSong();
 		updateSongList();
 		
@@ -309,6 +308,11 @@ function uploadSong() {
 	console.log('uploadSong');
 
 	// TODO: leave session if currently in someone else's session
+	if (hostingIndex == -1) {
+		
+	}
+
+	hostingIndex = 0;
 
 	// add another song to playlist
 

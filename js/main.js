@@ -15,6 +15,9 @@ var sessions = new Array();
 // this is a list of listeners for current session
 var listeners = new Array();
 
+// this is -1 if not hosting, otherwise the playlist index of the current song
+var hostingIndex = -1;
+
 var testing = true;
 
 var initialized = false;
@@ -66,11 +69,6 @@ function setup() {
 
 				// get session details
 				getSessionDetails();
-				// add first song if we have one
-				//if (server_session_cur_song_key) {
-				//	addSong(server_session_cur_song_key);
-				//}
-		
 			},
 			ontimeout: function() {
 				alert('Error loading soundmanager');
@@ -132,17 +130,18 @@ function handleServerMessage(message) {
 
 	
 	if (message.curSongKey) {
-		addSong(message.curSongKey);
+		// check if we have song
+		addSong(message.curSongKey, true);
 	}
 
 	if (message.newSongKey) {
-		addSong(message.newSongKey);
+		addSong(message.newSongKey, false);
 	}
 
     // update upcoming songs
 	if (message.playlist) {
 		for (idx in message.playlist) {
-			addSong(message.playlist[idx]);
+			addSong(message.playlist[idx], false);
 		}
 	}
 	

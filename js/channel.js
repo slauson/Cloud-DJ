@@ -31,3 +31,15 @@ channelOnError = function(error) {
 channelOnClose = function() {
 	console.log('channel closed');
 }
+
+/*
+ Updates channel when user is host
+ */
+function updateChannel() {
+	$.post('/update',
+		{'curIdx': hostingIndex, 'play': true, 'endflag': false, 'session_key': server_session_key},
+		function(message) {
+			console.log('/update response:' + message);
+		}
+	);
+}
