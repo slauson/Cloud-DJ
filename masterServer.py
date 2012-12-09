@@ -17,12 +17,6 @@ import string
 from dataServer import *
 
 # TODO: fix keys to be more standard?
-def ACL_key(user_id):
-    """ Constructs a key from the user id"""
-    return db.Key.from_path('ACL', user_id)
-
-def findACL(userid):
-    return db.get(ACL_key(userid))
 
 class LoggedInUsers(db.Model):
     """
@@ -104,11 +98,13 @@ class MainPage(webapp.RequestHandler):
             # No session specified, create a new one, make this the host 
             # session_key = user.user_id()
             session_key = session_key_gen()
+            curTime = datetime.now()
             session = Session(key_name = session_key,   # Key for the db.Model. 
                               host = user,
                               curSongIdx = 0,
                               play = False,
-                              eFlag = False)
+                              eFlag = False,
+                              timestamp = curTime)
             session.put()
         else:
             # Session exists 
@@ -118,11 +114,12 @@ class MainPage(webapp.RequestHandler):
                 self.response.out.write('Invalid session ' + session_key)
                 return
 
-            listeners = Session.get(session.listeners)
+            listeners = session.listeners
             if not session.host and (user not in listeners):
                 # User not in listener list 
                 listeners.append(user)
                 session.put()
+                SessionUpdater(session).send_update(SessionUpdater(session).get_session_message())
 
         session_link = 'http://localhost:8080/?session_key=' + session_key
         logout_link = users.create_logout_url('/')
