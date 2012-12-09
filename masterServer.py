@@ -158,7 +158,7 @@ class AddListener(webapp.RequestHandler):
         email = self.request.get('email') #email of potential listner to add
 
         # see if user is online
-        userid = db.get(email)
+        userid = ACLEntry.get_by_key_name(email)
         if (userid != None):
             # they're online and can be added
             ACLHandler().add(user.user_id, userid)
@@ -171,10 +171,16 @@ class RemoveListener(webapp.RequestHandler):
         email = self.request.get('email') #email of potential listner to add
 
         # see if user is online
-        userid = db.get(email)
-        if (userid != None):
-            # they're online and may be in this users list
-            ACLHandler().remove(user.user_id, userid)
+        if (email != ''): # ignore blank emails
+            userid = db.get(email)
+            if (userid != None):
+                # they're online and may be in this users list
+                ACLHandler().remove(user.user_id, userid)
+# FOR TESTING ONLY:
+#         userid = db.get(email)
+#         if (userid != None):
+#             # they're online and may be in this users list
+#             ACLHandler().remove(user.user_id, userid)
         
 
 class TestPage(webapp.RequestHandler):
