@@ -115,18 +115,23 @@ function handleServerMessage(message) {
 	// fix weird json encoding issues (http://stackoverflow.com/questions/9036429/convert-object-string-to-json)
 	message = $.parseJSON(JSON.stringify(eval('(' + message.data + ')')));
 
-	// don't need this?
+	// add host to listeners list
 	//host = message.host;
 	
 	// update listener list
 	// TODO: update incrementally?
-	if (message.listeners) {
-		listeners = new Array();
-		for (idx in message.listeners) {
-			listeners.push(new listener(message.listeners[idx]));
-		}
-		updateListenerList();
+	listeners = new Array();
+
+	// only add host if its not us
+	if (hostingIndex == -1 && message.hostEmail && message.hostEmail != server_me_email) {
+		listeners.push(new Listener(message.hostEmail + ' (host)'));
 	}
+	if (message.listeners) {
+		for (idx in message.listeners) {
+			listeners.push(new Listener(message.listeners[idx]));
+		}
+	}
+	updateListenerList();
 
 	
 	if (message.curSongKey) {

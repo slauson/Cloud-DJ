@@ -238,7 +238,7 @@ function nextSong() {
 	console.log('nextSong');
 
 	if (songs.length > 0) {
-		songs.pop().cleanup();
+		songs.shift().cleanup();
 		
 		// check if song list is empty
 		if (songs.length == 0) {
@@ -257,6 +257,8 @@ function nextSong() {
 			}
 			startSong();
 		}
+
+		updateSongList();
 	}
 }
 
@@ -312,7 +314,7 @@ function uploadSong() {
 		
 	}
 
-	hostingIndex = 0;
+	hostingIndex++;
 
 	// add another song to playlist
 
