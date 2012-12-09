@@ -12,6 +12,8 @@ from google.appengine.ext import db
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp.util import run_wsgi_app
 
+import string
+
 from dataServer import *
 
 def ACL_key(user_name=None):
@@ -104,7 +106,7 @@ class MainPage(webapp.RequestHandler):
         if not session_key:
             # No session specified, create a new one, make this the host 
             # session_key = user.user_id()
-            session_key = str(random.randint(0,128))
+            session_key = session_key_gen()
             session = Session(key_name = session_key,   # Key for the db.Model. 
                               host = user,
                               curSongIdx = 0,
@@ -159,9 +161,14 @@ app = webapp.WSGIApplication(
      ('/serve/([^/]+)?', ServeSong),
      ('/test', TestPage)], debug=True)
 
+def session_key_gen():
+    chars=string.ascii_letters + string.digits
+    return ''.join(random.choice(chars) for x in range(10))
+
+
 def main():
     run_wsgi_app(app)
-
+    
 if __name__ == "__main__":
     main()
 

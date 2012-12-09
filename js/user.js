@@ -116,17 +116,19 @@ function logout() {
 		songs.pop().cleanup();
 	}
 	
-	$.post('/logout',
+	$.get('/logout',
+		{'session_key': server_session_key},
+		function(message) {
+			console.log('/logout response:' + message);
+		}
+	);
+	
+	$.get(server_logout_link,
 		{},
 		function(message) {
 			console.log('/logout response:' + message);
 		}
 	);
-	$.post(server_logout_link,
-		{},
-		function(message) {
-			console.log('/logout response:' + message);
-		}
-	);
+	
 	window.location = '/'
 }
