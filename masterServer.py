@@ -12,6 +12,8 @@ from google.appengine.ext import db
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp.util import run_wsgi_app
 
+import string
+
 from dataServer import *
 
 # TODO: fix keys to be more standard?
@@ -35,7 +37,8 @@ class ACLEntry(db.Model):
     Keeps track for each user who can listen to their sessions (potential listeners) 
     and which sessions the user can listen to (potential sessions) 
     """
-    host       = db.UserProperty()                              # User 
+    host       = db.UserProperty()                       # User 
+    sessionkey = db.StringProperty()                     # user's session key - server can recreate channel ID
     plisteners = db.ListProperty(str, indexed=False)     # List of users who are allowed to listen to this one 
     psessions  = db.ListProperty(str, indexed=False)     # List of users whose session this user can listen to
 
@@ -81,27 +84,10 @@ class MainPage(webapp.RequestHandler):
             self.redirect(users.create_login_url(self.request.uri))
             return
 
-        ACL = findACL(user.user_id())
-        # if user has no ACL, create one with no listeners and no potential sessions
-        if (ACL == None):
-            ACL = ACLEntry(key_name=user.user_id(),
-                           host = user,
-                           plisteners = [],
-                           psessions = [])
-            ACL.put()
-
-        # TODO: remove when user logs out
-        # ADD USER TO LIST OF LOGGED IN USERS
-        # (so other users can add to listner list
-        addlog = LoggedInUsers(key_name = user.email(),
-                              userid = user.user_id())
-        addlog.put()
-
-            
         if not session_key:
             # No session specified, create a new one, make this the host 
             # session_key = user.user_id()
-            session_key = str(random.randint(0,128))
+            session_key = session_key_gen()
             session = Session(key_name = session_key,   # Key for the db.Model. 
                               host = user,
                               curSongIdx = 0,
@@ -121,6 +107,24 @@ class MainPage(webapp.RequestHandler):
                 # User not in listener list 
                 listeners.append(user)
                 session.put()
+
+        ACL = findACL(user.user_id())
+        # if user has no ACL, create one with no listeners and no potential sessions
+        if (ACL == None):
+            ACL = ACLEntry(key_name=user.user_id(),
+                           host = user,
+                           sessionkey = session_key, 
+                           plisteners = [],
+                           psessions = [])
+            ACL.put()
+
+        # TODO: remove when user logs out
+        # ADD USER TO LIST OF LOGGED IN USERS
+        # (so other users can add to listner list
+        addlog = LoggedInUsers(key_name = user.email(),
+                              userid = user.user_id())
+        addlog.put()
+
 
         session_link = 'http://localhost:8080/?session_key=' + session_key
         logout_link = users.create_logout_url('/')
@@ -195,9 +199,14 @@ app = webapp.WSGIApplication(
      ('/serve/([^/]+)?', ServeSong),
      ('/test', TestPage)], debug=True)
 
+def session_key_gen():
+    chars=string.ascii_letters + string.digits
+    return ''.join(random.choice(chars) for x in range(10))
+
+
 def main():
     run_wsgi_app(app)
-
+    
 if __name__ == "__main__":
     main()
 

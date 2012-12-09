@@ -127,7 +127,7 @@ class SessionUpdater():
         self.session.playlist.append(song.key())
         self.session.put()
         
-    def host_disconnect(self):
+    def remove_session(self):
         # Mark for deletion
         self.session.endFlag = True
         self.session.play = False
@@ -135,8 +135,12 @@ class SessionUpdater():
         self.send_update(self.get_session_message())
         # Delete after 
         for songKey in self.session.playlist:
-            Song.get(songKey).delete()  # Delete playlist from server
-        self.session.delete()
+            logging.info('songKey: ' + str(songKey))
+            song = Song.get(songKey)  # Delete playlist from server
+            blobstore.delete(song.blob_key.key())
+            db.delete(song)
+        
+        db.delete(self.session)
 
             
 class SessionFromRequest():
@@ -162,9 +166,9 @@ class ChannelDisconnect(webapp.RequestHandler):
         channel_id = self.request.get('from')
         channel_id = channel_id.split("_", maxsplit=1)
         if (len(channel_id) != 2):
-            return
-        user = users.User(_user_id = channel_id[0]) # extract user
-        session_key = channel_id[1] # extract session key
+            user = users.User(_user_id = channel_id[0]) # extract user
+        logging.info('channel_id: ' + channel_id)
+        session_key = channel_id[-1] # extract session key
         session = Session.get_by_key_name(session_key)
         if (session and user in session.listeners):
             SessionUpdater(session).remove_listener(user)
@@ -173,13 +177,13 @@ class ChannelDisconnect(webapp.RequestHandler):
             
 # /logout
 class Logout(webapp.RequestHandler):
-    def post(self):
+    def get(self):
         user = users.get_current_user()
-        session = SessionFromRequest(self.request).get_session()
+        session = SessionFromRequest(self.request).get_session()   
         if (session and user == session.host):
-            SessionUpdater(Session).remove_session()
+            SessionUpdater(session).remove_session()
         elif (session and user in session.listeners):
-            SessionUpdater(Session).remove_listener(user)
+            SessionUpdater(session).remove_listener(user)
 
 # Make updates to session information
 # Message from host
