@@ -133,6 +133,7 @@ class MainPage(webapp.RequestHandler):
             token = channel.create_channel(user.user_id() + "_" + session_key)
             template_values = {'token': token,
                                'me': user.user_id(),
+							   'me_email': user.email(),
                                'session_key': session_key,
                                'session_link': session_link,
                                'logout_link': logout_link,
