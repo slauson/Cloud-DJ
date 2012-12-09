@@ -114,6 +114,10 @@ class MainPage(webapp.RequestHandler):
         else:
             # Session exists 
             session = Session.get_by_key_name(session_key)
+
+            if not session:
+                self.response.out.write('Invalid session ' + session_key)
+
             listeners = Session.get(session.listeners)
             if not session.host and (user not in listeners):
                 # User not in listener list 
@@ -152,7 +156,7 @@ app = webapp.WSGIApplication(
      ('/logout', Logout),
      ('/_ah/channel/disconnected', ChannelDisconnect),
      ('/update', UpdateChannel),
-	 ('/info', SessionInfo),
+     ('/info', SessionInfo),
      ('/remove', RemoveListener),
      ('/generate_upload_url', UploadURL),
      ('/upload', UploadSong),
