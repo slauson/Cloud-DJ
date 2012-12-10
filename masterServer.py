@@ -99,7 +99,7 @@ class MainPage(webapp.RequestHandler):
                 return
 
             listeners = session.listeners
-            if not session.host and (user not in listeners):
+            if (user != session.host) and (user not in listeners):
                 # User not in listener list 
                 listeners.append(user)
                 session.put()
@@ -123,6 +123,8 @@ class MainPage(webapp.RequestHandler):
         addlog.put()
 
 
+        # Deployed version:
+        # session_link = 'http://cloud-dj.appspot.com/?session_key=' + session_key
         session_link = 'http://localhost:8080/?session_key=' + session_key
         logout_link = users.create_logout_url('/')
 

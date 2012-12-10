@@ -61,10 +61,15 @@ class SessionUpdater():
     def get_session_message(self):
         playlist = self.session.playlist
         idx = self.session.curSongIdx
+        
+        listeners = []
+        for lst in self.session.listeners:
+            listeners.append(lst.user_id())
+        
         sessionUpdate = {
             'host': self.session.host.user_id(),
 			'hostEmail': self.session.host.email(),
-            'listeners': self.session.listeners,
+            'listeners': listeners,
             'play': self.session.play,              # Tell the client to play or not
             'endFlag': self.session.endFlag,         # Session end or not
             'timestamp':self.session.timestamp
@@ -129,8 +134,12 @@ class SessionUpdater():
     def remove_listener(self, user):
         self.session.listeners.remove(user)
         self.session.put()
+        listeners = []
+        for lst in self.session.listeners:
+            listeners.append(lst.user_id())
+            
         sessionUpdate = {
-            'listeners': self.session.listeners
+            'listeners': listeners
         }
         message = simplejson.dumps(sessionUpdate)
         self.send_update(message)

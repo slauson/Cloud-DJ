@@ -5,12 +5,26 @@
 	left: 0px;
 	width: 100%;
 	height: 100px;
-	background-color: #4EB1BA;
+/*	background-color: #4EB1BA;*/
 	color: white;
 	padding: 0px;
 	margin: 0px;
 	z-index: 1;
-	border-bottom: 2px solid black;
+	border-bottom: 2px solid #9ecb2d;
+	
+	font-weight: normal;
+	font-family: Georgia;
+	font-size: 35px;
+	text-shadow: 0px -1px 0px #374683;
+	
+	background: #202020; /* Old browsers */
+	background: -moz-linear-gradient(top,  #7d7e7d 0%, #202020 100%); /* FF3.6+ */
+	background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#7d7e7d), color-stop(100%,#202020)); /* Chrome,Safari4+ */
+	background: -webkit-linear-gradient(top,  #7d7e7d 0%,#202020 100%); /* Chrome10+,Safari5.1+ */
+	background: -o-linear-gradient(top,  #7d7e7d 0%,#202020 100%); /* Opera 11.10+ */
+	background: -ms-linear-gradient(top,  #7d7e7d 0%,#202020 100%); /* IE10+ */
+	background: linear-gradient(top,  #7d7e7d 0%,#202020 100%); /* W3C */
+	filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#7d7e7d', endColorstr='#202020',GradientType=0 ); /* IE6-9 */
 }
 
 #container
@@ -49,6 +63,19 @@
 	float: right;
 }
 
+#song {
+	padding: 10px;
+	background: white;
+	border: 1px solid #cccccc;
+}
+
+#other_sessions{
+	width: 260px; 
+	height:100px; 
+	background: white;
+	border: 1px solid #cccccc;
+}
+
 form {
 	display:inline;
 }
@@ -83,4 +110,19 @@ form {
 
 .pointer {
 	cursor: pointer;
+}
+
+body{
+	padding: 0px;
+	margin: 0px;
+	font-family: Verdana;
+	font-size: 12px;
+	background-color: #eeeeee;
+	color: #555555;
+}
+
+hr {
+	color: #9ecb2d;
+	background-color: #9ecb2d;
+	height: 2px;
 }

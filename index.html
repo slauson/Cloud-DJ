@@ -33,10 +33,13 @@
 			
 				<div id="session_list">
 					<h2>Session List</h2>
-					<ul id="sessions"></ul>
+					<div id="other_sessions">
+						<ul id="sessions"></ul>
+					</div>
+					<h2>Current Session</h2>
 					<div id="upload_song">
 						<form id="upload_song_form" action="/update" target="hidden_frame" method="POST" enctype="multipart/form-data">
-							Play own music<input id="upload_song_form_file" type="file" name="file">
+							Add song to playlist: <input id="upload_song_form_file" type="file" name="file">
 							<input id="upload_song_form_filename" class="hidden" type="text" name="filename">
 							<!--<input id="upload_song_form_endflag" class="hidden" type="checkbox" name="endflag" checked="true">-->
 							<input id="upload_song_form_session_key" class="hidden" type="text" name="session_key">
@@ -44,8 +47,8 @@
 					</div>
 					<div id="add_user">
 					  <form action="/add_listener" target="hidden_frame" method="post">
-					    <div><textarea name="email" rows="1" cols="40"></textarea></div>
-					    <div><input type="submit" value="Add User"></div>
+					    <div><textarea name="email" rows="1" cols="40" style="width: 260px"></textarea></div>
+					    <div><input type="submit" value="Add User To Session"></div>
 					  </form>
 					</div>
 				</div>
@@ -61,13 +64,17 @@
 					<h1 class="text-center">Currently Playing</h1>
 			
 					<div id="song">
-						<div id="song_title">Song</div></br>
-						<div id="song_artist">Artist</div></br>
-						<div id="song_album">Album</div></br>
+						Song: <div id="song_title"></div></br>
+						Artist: <div id="song_artist"></div></br>
+						Album: <div id="song_album"></div></br>
 						<div id="song_playback"></div></br>
 						<div id="song_loading"></div></br>
-						<button id="toggle_mute">Toggle Mute</button></br>
-						<hr></br>
+						<hr>
+						<p align="center"><button id="toggle_mute">Toggle Mute</button>
+						<button id="pause_button">Pause</button>
+						<button id="play_button">Play</button>
+						<button id="skip_button">Next</button>
+						</p>
 					</div>
 				</div>
 				
