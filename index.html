@@ -51,6 +51,12 @@
 					    <div><input type="submit" value="Add User To Session"></div>
 					  </form>
 					</div>
+					<div id="remove_user">
+					  <form action="/remove_listener" target="hidden_frame" method="post">
+					    <div><input type="text" name="email" rows="1" cols="40" style="width: 260px"></textarea></div>
+					    <div><input type="submit" value="Remove User From Session"></div>
+					  </form>
+					</div>
 				</div>
 				
 				<iframe id="hidden_frame" class="hidden"></iframe>

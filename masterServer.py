@@ -27,19 +27,6 @@ class LoggedInUsers(db.Model):
     """
     userid = db.StringProperty()
 
-# MOVED TO dataServer.py
-# class ACLEntry(db.Model):
-#     """
-#     Individual ACL (Access Control List) entry. 
-#     Keeps track for each user who can listen to their sessions (potential listeners) 
-#     and which sessions the user can listen to (potential sessions) 
-#     """
-#     host       = db.UserProperty()                       # User 
-#     sessionkey = db.StringProperty()                     # user's session key - server can recreate channel ID
-#     plisteners = db.ListProperty(str, indexed=False)     # List of users who are allowed to listen to this one 
-#     psessions  = db.ListProperty(str, indexed=False)     # List of users whose session this user can listen to
-
-
 class ACLHandler():
     def add(self, host, plistener):
         """ Adds plistener to host's plistener ACL 
@@ -182,7 +169,7 @@ class AddListener(webapp.RequestHandler):
         email = self.request.get('email') #email of potential listner to add
 
         # see if user is online
-        if (email != ''):
+        if (email != ''): #ignore blank emails
             Otherloggedinuser = LoggedInUsers.get_by_key_name(email)
             userid = Otherloggedinuser.userid
             if (userid != None):
@@ -202,12 +189,7 @@ class RemoveListener(webapp.RequestHandler):
             userid = Otherloggedinuser.userid
             if (userid != None):
                 # they're online and may be in this users list
-                ACLHandler().remove(user.user_id, userid)
-# FOR TESTING ONLY:
-#         userid = db.get(email)
-#         if (userid != None):
-#             # they're online and may be in this users list
-#             ACLHandler().remove(user.user_id, userid)
+                ACLHandler().remove(user.user_id(), userid)
         
 
 jinja_environment = jinja2.Environment(
