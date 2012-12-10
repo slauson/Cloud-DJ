@@ -1,13 +1,13 @@
 
 /*
- This file contains song related objects/methods.
+   This file contains song related objects/methods.
  */
 
 
 /*
- ---------------------------------------
- Song object (basically a wrapper around soundmanager2's sound object)
- ---------------------------------------
+   ---------------------------------------
+   Song object (basically a wrapper around soundmanager2's sound object)
+   ---------------------------------------
  */
 function Song(id, url, position) {
 	console.log('new Song: ' + id + ', ' + url + ', ' + position);
@@ -17,7 +17,7 @@ function Song(id, url, position) {
 	this.sound = soundManager.createSound({
 		id: id,
 		url: url,
-		position: position,
+		position: position*1000,
 		autoLoad: false,
 		autoPlay: false,
 		onload:function() {
@@ -30,10 +30,6 @@ function Song(id, url, position) {
 		onfinish:function() {
 			console.log(this.id + ' done playing');
 
-			// hide playback/loading info
-			//$('#song_playback').hide();
-			//$('#song_loading').hide();
-
 			// go to next song
 
 			// wait for host update before going to next song
@@ -43,7 +39,7 @@ function Song(id, url, position) {
 			console.log(this.id + ' loading (' + this.bytesLoaded + ' / ' + this.bytesTotal + ')');
 
 			// update loading bar/percentage only if song is currently playing
-			if (this.playState == 1) {
+			if (this.playState == 1 || this.paused) {
 				var str = Math.floor((this.bytesLoaded/this.bytesTotal)*100) + '% Loaded';
 
 				if (str != $('#song_loading').html) {
@@ -55,10 +51,9 @@ function Song(id, url, position) {
 			// update time of song
 			var str = getTimeStr(this.position/1000) + ' / ' + getTimeStr(this.duration/1000);
 			
-			if (str != $('#song_playback').html) {
+			if (str != $('#song_playback').html && this.position < this.duration && !this.paused) {
 				$('#song_playback').html(str);
 			}
-			//console.log(this.id + ' playing (' + this.position + ' / ' + this.duration + ')');
 		},
 		onid3:function() {
 			console.log('onid3: ' + this.playState);
@@ -67,8 +62,8 @@ function Song(id, url, position) {
 				console.log(prop + ': ' + this.id3[prop]);
 			}
 
-			// update properties if song is already playing
-			if (this.playState == 1) {
+			// update properties if song is already playing or is paused
+			if (this.playState == 1 || this.paused) {
 				setSongProperties();
 			}
 			// otherwise update up next list
@@ -89,6 +84,28 @@ function Song(id, url, position) {
 		this.sound.stop()
 	}
 	
+	// pause song
+	this.pause = function() {
+		this.sound.pause()
+		$('#song_playback').html($('#song_playback').html() + ' (Paused)');
+	}
+
+	// returns true if song is paused
+	this.isPaused = function() {
+		return this.sound.paused;
+	}
+
+	// returns true if sound is muted
+	this.isMuted = function() {
+		return this.sound.muted;
+	}
+
+	// return current playback position in seconds
+	this.getPlayback = function() {
+		console.log('getPlayback: ' + this.sound.position);
+		return Math.floor(this.sound.position / 1000);
+	}
+
 	// mute song
 	this.toggleMute = function() {
 		this.sound.toggleMute();
@@ -97,6 +114,17 @@ function Song(id, url, position) {
 	// load song
 	this.load = function() {
 		this.sound.load();
+	}
+
+	// sets song position in seconds
+	// only actually sets position if we have loaded data up to that point
+	this.setPosition = function(offset) {
+		console.log('setPosition(' + offset + ')');
+		if (offset != 0 && (typeof this.sound.loaded == "undefined" ||
+				!this.sound.loaded || (this.sound.duration && offset * 1000 < this.sound.duration)))
+		{
+			this.sound.setPosition(offset * 1000);
+		}
 	}
 
 	// cleanup song
@@ -164,30 +192,35 @@ function Song(id, url, position) {
 }
 
 /*
- ---------------------------------------
- Methods
- ---------------------------------------
+   ---------------------------------------
+   Methods
+   ---------------------------------------
+   1355122331.0,
+   1355122357.0
+   1355122388.0
  */
 
 /*
- Start current song
+   Play current song
  */
-function startSong() {
-	console.log('startSong');
+function playSong(offset) {
+	console.log('playSong(' + offset + ')');
 
 	if (songs.length > 0) {
-		songs[0].play();
 
-		// show playback/loading info
-		$('#song_playback').show();
-		$('#song_loading').show();
+		// only set position if song is paused and at beginning
+		if (offset >= 0 && songs[0].isPaused() && songs[0].getPlayback() < 2) {
+			songs[0].setPosition(offset);
+		}
+
+		songs[0].play();
 
 		songs[0].setProperties();
 	}
 }
 
 /*
- Stop current song
+   Stop current song
  */
 function stopSong() {
 	if (songs.length > 0) {
@@ -196,14 +229,43 @@ function stopSong() {
 }
 
 /*
- Toggle mute of current song
+   Stop current song
  */
-function toggleMuteSong() {
+function stopSong() {
 	if (songs.length > 0) {
-		songs[0].toggleMute();
+		songs[0].stop();
 	}
 }
 
+/*
+   Pause current song
+ */
+function pauseSong() {
+	if (songs.length > 0) {
+		songs[0].pause();
+	}
+}
+
+/*
+   Returns current song playback in seconds
+ */
+function getSongPlayback() {
+	if (songs.length > 0) {
+		return songs[0].getPlayback();
+	} else {
+		return 0;
+	}
+}
+
+/*
+   Returns true if current song is paused
+ */
+function isSongPaused() {
+	return songs.length == 0 || songs[0].isPaused();
+}
+/*
+   Updates song title, artist, album
+ */
 function setSongProperties() {
 	if (songs.length > 0) {
 		songs[0].setProperties();
@@ -211,12 +273,10 @@ function setSongProperties() {
 }
 
 /*
- Loads next song if possible
+   Loads next song if possible
  */
 function loadSong() {
 	console.log('loadSong');
-
-	// TODO: check for more songs on server
 
 	for (idx in songs) {
 		// check if song is not loaded yet
@@ -232,7 +292,7 @@ function loadSong() {
 }
 
 /*
- Plays next song if possible
+   Plays next song if possible
  */
 function nextSong() {
 	console.log('nextSong');
@@ -244,7 +304,7 @@ function nextSong() {
 		if (songs.length == 0) {
 			if (hostingIndex != -1) {
 				alert("Please choose another song to continue your session.");
-				// TODO: send update to server
+				// TODO: send some kind of update to server?
 			} else {
 				alert("Session host has not chosen the next song.");
 			}
@@ -253,9 +313,10 @@ function nextSong() {
 		else {
 
 			if (hostingIndex != -1) {
-				updateChannel();
+				hostingIndex++;
+				updateChannel(1, 0, 0);
 			}
-			startSong();
+			playSong(0);
 		}
 
 		updateSongList();
@@ -263,7 +324,7 @@ function nextSong() {
 }
 
 /*
- Updates song list from song array
+   Updates song list from song array
  */
 function updateSongList() {
 
@@ -277,46 +338,100 @@ function updateSongList() {
 }
 
 /*
- Adds song to list if we don't already have it
+   Adds song to list if we don't already have it.
+   This also plays pauses existing songs.
+    - url: url of song to add
+    - offset: offset of playing song
+    - play: play song
+    - setCurrent: song is new current song (host skipped song)
  */
-function addSong(url, forcePlay) {
+function addSong(url, offset, play, setCurrent) {
+	console.log('addSong(' + url + ', ' + offset + ', ' + play + ', ' + setCurrent + ')');
+
 	// update current song info
-	var containsSong = false;
+	var containsSongIndex = -1;
+
 	// check if we have the song already
 	for (idx in songs) {
-		if (songs[idx].url == url) {
-			containsSong = true;
+		if (songs[idx].id == url) {
+			containsSongIndex = idx;
 			break;
 		}
 	}
 
-	// if not, add it to list
-	if (!containsSong) {
-		songs.push(new Song(url, 'serve/' + url, 0));
+	console.log('containsSongIndex:\t' + containsSongIndex);
+
+	// we don't have song, add it to list
+	if (containsSongIndex == -1) {
+		songs.push(new Song(url, 'serve/' + url, offset));
 		loadSong();
+
+		// if we get a force play, stop current song, cleanup all songs
+		if (setCurrent) {
+			console.log('\tremoving any existing songs from playlist (do not have song)');
+			stopSong();
+
+			while (songs.length > 1) {
+				songs.shift().cleanup();
+			}
+		}
+
 		updateSongList();
 		
 		// play song immediately if its the only song
 		if (songs.length == 1) {
-			startSong();
+			if (play) {
+				playSong(offset);
+			} else {
+				pauseSong();
+
+				// update song properties
+				setSongProperties();
+			}
 		}
 	}
+	// we have song and its currently playing
+	else if (containsSongIndex == 0) {
+		if (play) {
+			playSong(offset);
+		} else {
+			pauseSong();
+		}
+	}
+	// we have song in the playlist
+	else {
+		
+		if (setCurrent) {
+			console.log('\tremoving songs from playlist (have song)');
+			stopSong();
+
+			var temp = containsSongIndex;
+
+			while (temp > 0) {
+				songs.shift().cleanup();
+				temp--;
+			}
+
+			updateSongList();
+
+			if (play) {
+				playSong(offset);
+			}
+		}
+	}
+
 }
 
 /*
- Upload song to server
+   Upload song to server
  */
 function uploadSong() {
 	console.log('uploadSong');
 
 	// TODO: leave session if currently in someone else's session
 	if (hostingIndex == -1) {
-		
+		hostingIndex = 0;
 	}
-
-	hostingIndex++;
-
-	// add another song to playlist
 
 	// fill in other args before upload
 	$('#upload_song_form_filename').val($('#upload_song_form_file').val().replace('C:\\fakepath\\', ''));
@@ -330,4 +445,9 @@ function uploadSong() {
 
 	// clear filename in input form
 	$('#upload_song_form')[0].reset();
+
+	// enable pause/play/next buttons
+	$('#pause_button').removeAttr('disabled');
+	$('#play_button').removeAttr('disabled');
+	$('#next_button').removeAttr('disabled');
 }

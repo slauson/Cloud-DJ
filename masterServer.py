@@ -80,16 +80,21 @@ class MainPage(webapp.RequestHandler):
 
         if not session_key:
             # No session specified, create a new one, make this the host 
-            # session_key = user.user_id()
-            session_key = session_key_gen()
-            curTime = datetime.now()
-            session = Session(key_name = session_key,   # Key for the db.Model. 
-                              host = user,
-                              curSongIdx = 0,
-                              play = False,
-                              eFlag = False,
-                              timestamp = curTime)
-            session.put()
+            # If this user is already hosting, connect them to the existing session
+            q = Session.all().filter("host =", user)
+            session = q.get()
+            if not session:
+                session_key = session_key_gen()
+                curTime = datetime.datetime.now()
+                session = Session(key_name = session_key,   # Key for the db.Model. 
+                                  host = user,
+                                  curSongIdx = 0,
+                                  play = False,
+                                  endFlag = False,
+                                  timestamp = curTime)
+                session.put()
+            else:
+                session_key = session.key().name()
         else:
             # Session exists 
             session = Session.get_by_key_name(session_key)
@@ -98,12 +103,18 @@ class MainPage(webapp.RequestHandler):
                 self.response.out.write('Invalid session ' + session_key)
                 return
 
-            listeners = session.listeners
-            if not session.host and (user not in listeners):
+            logging.info('existing session: ' + str(user) + ', ' + str(session.host))
+            if user != session.host and (user not in session.listeners):
+                logging.info('add user ' + str(user.email()) + ' to listeners')
                 # User not in listener list 
-                listeners.append(user)
+                session.listeners.append(user)
                 session.put()
                 SessionUpdater(session).send_update(SessionUpdater(session).get_session_message())
+
+            # Perform cleanup where we remove any sessions for which we are the host
+            q = Session.all().filter('host =', user)
+            for ses in q.run(read_policy=db.STRONG_CONSISTENCY):
+                SessionUpdater(ses).remove_session()
 
         ACL = findACL(user.user_id())
         # if user has no ACL, create one with no listeners and no potential sessions
@@ -123,6 +134,8 @@ class MainPage(webapp.RequestHandler):
         addlog.put()
 
 
+        # Deployed version:
+        # session_link = 'http://cloud-dj.appspot.com/?session_key=' + session_key
         session_link = 'http://localhost:8080/?session_key=' + session_key
         logout_link = users.create_logout_url('/')
 
@@ -130,13 +143,16 @@ class MainPage(webapp.RequestHandler):
             token = channel.create_channel(user.user_id() + "_" + session_key)
             template_values = {'token': token,
                                'me': user.user_id(),
-							   'me_email': user.email(),
+                               'me_email': user.email(),
                                'session_key': session_key,
                                'session_link': session_link,
                                'logout_link': logout_link,
                                }
             # combine these so that they can be used on the client side
             #template_values.update(SessionUpdater(session).get_session_details())
+            
+            # send update out when someone joins session
+            #SessionUpdater(session).send_update(SessionUpdater(session).get_session_message())
 
             template = jinja_environment.get_template('index.html')
             self.response.out.write(template.render(template_values))
@@ -181,11 +197,6 @@ class RemoveListener(webapp.RequestHandler):
 #             ACLHandler().remove(user.user_id, userid)
         
 
-class TestPage(webapp.RequestHandler):
-    def get(self):
-        template = jinja_environment.get_template('index.html')
-        self.response.out.write(template.render({}))
-        
 jinja_environment = jinja2.Environment(
     loader=jinja2.FileSystemLoader(os.path.dirname(__file__)))
 app = webapp.WSGIApplication(
@@ -200,8 +211,7 @@ app = webapp.WSGIApplication(
      ('/upload', UploadSong),
      ('/add_listener', AddListener),
      ('/sessions', GetLiveSessions),
-     ('/serve/([^/]+)?', ServeSong),
-     ('/test', TestPage)], debug=True)
+     ('/serve/([^/]+)?', ServeSong)], debug=True)
 
 def session_key_gen():
     chars=string.ascii_letters + string.digits

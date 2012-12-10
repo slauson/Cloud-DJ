@@ -36,7 +36,7 @@ var server_session_cur_song_key = "{{ curSongKey }}";
  */
 
 /*
- Sets stuff up once the document is fully loaded
+   Sets stuff up once the document is fully loaded
  */
 function setup() {
 
@@ -45,7 +45,15 @@ function setup() {
 		// TODO: setup logout
 		$('#logout').click(logout);
 		$('#upload_song_form').change(uploadSong);
-		$('#toggle_mute').click(toggleMuteSong);
+		$('#toggle_mute').click(userToggleMute);
+		$('#pause_button').click(userPauseSong);
+		$('#play_button').click(userPlaySong);
+		$('#next_button').click(userNextSong);
+
+		// disable buttons until user hosts session
+		$('#pause_button').attr('disabled', 'disabled');
+		$('#play_button').attr('disabled', 'disabled');
+		$('#next_button').attr('disabled', 'disabled');
 		
 		// setup channel
 		createChannel();
@@ -67,6 +75,9 @@ function setup() {
 
 				// get session details
 				getSessionDetails();
+
+				// get sessions
+				updateSessionList();
 			},
 			ontimeout: function() {
 				alert('Error loading soundmanager');
@@ -76,73 +87,89 @@ function setup() {
 }
 
 /*
- Handles server message from channel or other means
- 
- Message contents:
-  - TODO: sessions: list of sessions (sessionId, host, song)
-  - listeners: list of listener usernames
-  - song: title of new song in session
-  - host: username of host in session
-  - TODO: url: url of new song in session
-  - endFlag: true if session is being ended
-
-	'host': self.session.host.user_id(),
-	'listeners': self.session.listeners,
-	'title': song.title,                    # Current song title
-	'artist': song.artist,                  # Current song artist
-	'curSongKey': str(song.blob_key),       # Current song blob key. Serve url: /serve/blob_key
-	'play': self.session.play,              # Tell the client to play or not
-	'endFlag': self.session.endFlag         # Session end or not
-
-	'title': song.title,
-	'artist': song.artist,
-	'curSongKey': str(song.blob_key),
-	'play': self.session.play,
-	'endFlag': self.session.endFlag
+   Handles server message from channel or other means
  */
 function handleServerMessage(message) {
 	
 	console.log('handleServerMessage');
 	console.log(message.data);
 
+	message = message.data;
+
+	savedMessage = message;
+
 	// fix weird json encoding issues (http://stackoverflow.com/questions/9036429/convert-object-string-to-json)
-	message = $.parseJSON(JSON.stringify(eval('(' + message.data + ')')));
+	//message = $.parseJSON(JSON.stringify(eval('(' + message.data + ')')));
+	while (typeof message == "string") {
+		message = JSON.parse(message);
+	}
 
 	// add host to listeners list
 	//host = message.host;
 	
 	// update listener list
 	// TODO: update incrementally?
-	listeners = new Array();
 
-	// only add host if its not us
-	if (hostingIndex == -1 && message.hostEmail && message.hostEmail != server_me_email) {
-		listeners.push(new Listener(message.hostEmail + ' (host)'));
-	}
-	if (message.listeners) {
-		for (idx in message.listeners) {
-			listeners.push(new Listener(message.listeners[idx]));
+	// only update if empty or we have listeners
+	if (listeners.length == 0 || message.listeners) {
+		listeners = new Array();
+
+		// only add host if its not us
+		if (hostingIndex == -1 && message.hostEmail != server_me_email) {
+			listeners.push(new Listener(message.hostEmail + ' (host)'));
 		}
-	}
-	updateListenerList();
+		if (message.listeners) {
+			for (idx in message.listeners) {
 
+				// only add listener entry if its not us
+				if (message.listeners[idx] != server_me_email) {
+					listeners.push(new Listener(message.listeners[idx]));
+				}
+			}
+		}
+		updateListenerList();
+	}
 	
-	if (message.curSongKey) {
+	// add upcoming current songs only if listener
+	if (hostingIndex == -1) {
+
 		// check if we have song
-		addSong(message.curSongKey, true);
-	}
+		if (message.curSongKey) {
 
-	if (message.newSongKey) {
-		addSong(message.newSongKey, false);
-	}
+			// check if we should play/pause
+			var play = typeof message.play == "undefined" || message.play;
 
-    // update upcoming songs
-	if (message.playlist) {
-		for (idx in message.playlist) {
-			addSong(message.playlist[idx], false);
+			// check if we have timestamp
+			if (message.timestamp) {
+
+				// calculate offset to start playing song
+				var now = Math.round((new Date()).getTime() / 1000);
+
+				var offset = now - message.timestamp;
+
+				console.log('offsets: ' + message.timestamp + ', ' + now + ', ' + offset);
+
+				addSong(message.curSongKey, offset, play, true);
+			} else {
+				console.log('2b');
+				addSong(message.curSongKey, 0, play, true);
+			}
+		}
+
+		// update upcoming songs
+		if (message.playlist) {
+			for (idx in message.playlist) {
+				addSong(message.playlist[idx], 0, false, false);
+			}
 		}
 	}
 	
+	// add newly uploaded song, play if hosting (for initial upload)
+	if (message.newSongKey) {
+		var play = typeof message.play == "undefined" || message.play;
+		addSong(message.newSongKey, 0, play, false);
+	}
+
 	// session was killed
 	if (message.endFlag) {
 		alert(server_host + " has ended the session. Please join or start a session.");
@@ -150,6 +177,9 @@ function handleServerMessage(message) {
 	}
 }
 
+/*
+   Requests and updates available sessions
+ */
 function getSessionDetails() {
 	$.get('/info',
 		{'session_key': server_session_key},
@@ -166,7 +196,60 @@ function getSessionDetails() {
 }
 
 /*
- Returns a nice time string for playback
+   Toggle mute of all songs
+ */
+function userToggleMute() {
+	if (soundManager.ok()) {
+		if (songs.length > 0 && songs[0].isMuted()) {
+			soundManager.unmute();
+		} else {
+			soundManager.mute();
+		}
+	}
+}
+
+/*
+   Pauses current song, sends update to server.
+ */
+function userPauseSong() {
+	console.log('userPauseSong()');
+
+	// only pause if current song is already playing
+	if (!isSongPaused()) {
+		pauseSong();
+
+		updateChannel(0, 0, 0);
+	}
+}
+
+/*
+   Plays current song, sends update to server.
+ */
+function userPlaySong() {
+	console.log('userPlaySong(): ' + getSongPlayback());
+
+	// only play if current song is already paused
+	if (isSongPaused()) {
+		playSong(-1);
+
+		updateChannel(1, 0, -getSongPlayback());
+	}
+}
+
+/*
+   Goes to next song, sends update to server.
+ */
+function userNextSong() {
+	// check if we have another song
+	if (songs.length <= 1) {
+		alert('Add a song before skipping it');
+	} else {
+		nextSong();
+	}
+}
+
+/*
+   Returns a nice time string for playback
  */
 function getTimeStr(seconds) {
 	var minutes = Math.floor(seconds / 60);
@@ -181,7 +264,7 @@ function getTimeStr(seconds) {
 }
 
 /*
- Gets upload URL for uploading file from server and updates form action
+   Gets upload URL for uploading file from server and updates form action
  */
 function getUploadUrl() {
 	$.get('/generate_upload_url',

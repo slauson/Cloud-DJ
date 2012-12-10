@@ -1,10 +1,12 @@
 
 /*
- This file contains channel related objects/methods.
+  This file contains channel related objects/methods.
  */
 
 
-// create channel from server token
+/*
+   Create channel from server token
+ */
 function createChannel() {
 	channel = new goog.appengine.Channel(server_token);
     socket = channel.open();
@@ -19,13 +21,13 @@ channelOnOpen = function() {
 }
 
 channelOnMessage = function(message) {
-	console.log('channel message: ' + message);
+	console.log('channelOnMessage');
 	
 	handleServerMessage(message);	
 }
 
 channelOnError = function(error) {
-	alert('channel error: ' + error.description + '(' + error.code + ')');
+	console.log('channel error: ' + error.description + '(' + error.code + ')');
 }
 
 channelOnClose = function() {
@@ -33,11 +35,11 @@ channelOnClose = function() {
 }
 
 /*
- Updates channel when user is host
+   Updates channel when user is host
  */
-function updateChannel() {
+function updateChannel(play, endflag, num) {
 	$.post('/update',
-		{'curIdx': hostingIndex, 'play': true, 'endflag': false, 'session_key': server_session_key},
+		{'session_key': server_session_key, 'curIdx': hostingIndex, 'play': play, 'endflag': endflag, 'num': num},
 		function(message) {
 			console.log('/update response:' + message);
 		}

@@ -65,10 +65,12 @@ function updateSessionList() {
 
 			for (idx in lines) {
 				if (lines[idx].length > 0) {
-					// TODO: don't add own session
-					// TODO: limit split to 3
-					var parts = lines[idx].split(',');
-					sessions.push(new Session(parts[1], parts[0], parts[2]));
+					var parts = lines[idx].split(',', 3);
+
+					// only add other sessions
+					if (parts[1] != server_session_key) {
+						sessions.push(new Session(parts[1], parts[0], parts[2]));
+					}
 				}
 			}
 
@@ -76,7 +78,7 @@ function updateSessionList() {
 
 			// no sessions
 			if (sessions.length == 0) {
-				$('#sessions').append('<li>There are no current sessions</li>');
+				$('#sessions').append('<li>There are no other active sessions</li>');
 			} else {
 				for (idx in sessions) {
 					$('#sessions').append(sessions[idx].getList());
@@ -87,15 +89,21 @@ function updateSessionList() {
 	);
 }
 
+/*
+   Joins another user's session, redirecting to new page
+ */
 function joinSession(sessionId) {
 	console.log('joinSession: ' + sessionId);
 
-	//console.log('redirect to "//?session_key=' + sessionId + '"');
-	var answer = confirm ("Are you sure you want to leave your current session?");
+	// 
+	var answer = true;
+	
+	// if we are in an active session, confirm
+	if (songs.length > 0) {
+		answer = confirm ("Are you sure you want to leave your current session?");
+	}
 	
 	if (answer) {
-		hostingSession = false;
-
 		// redirect to other page
 		window.location = '/?session_key=' + sessionId;
 	}
@@ -117,10 +125,16 @@ function logout() {
 		songs.pop().cleanup();
 	}
 	
+	$.get('/logout',
+		{'session_key': server_session_key},
+		function(message) {
+			console.log('/logout response:' + message);
+		}
+	);
 	$.post(server_logout_link,
 		{},
 		function(message) {
-			console.log('/logout response:' + message);
+			console.log('logout response:' + message);
 		}
 	);
 	window.location = '/'
