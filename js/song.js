@@ -95,6 +95,11 @@ function Song(id, url, position) {
 		return this.sound.paused;
 	}
 
+	// returns true if sound is muted
+	this.isMuted = function() {
+		return this.sound.muted;
+	}
+
 	// return current playback position in seconds
 	this.getPlayback = function() {
 		console.log('getPlayback: ' + this.sound.position);
@@ -308,7 +313,8 @@ function nextSong() {
 		else {
 
 			if (hostingIndex != -1) {
-				updateChannel();
+				hostingIndex++;
+				updateChannel(1, 0, 0);
 			}
 			playSong(0);
 		}
@@ -332,36 +338,44 @@ function updateSongList() {
 }
 
 /*
-   Adds song to list if we don't already have it
+   Adds song to list if we don't already have it.
+   This also plays pauses existing songs.
     - url: url of song to add
     - offset: offset of playing song
     - play: play song
-    - forcePlay: force song to play immediately (host skipped song or we just joined session)
+    - setCurrent: song is new current song (host skipped song)
  */
-function addSong(url, offset, play, forcePlay) {
-	console.log('addSong(' + url + ', ' + offset + ', ' + play + ', ' + forcePlay + ')');
+function addSong(url, offset, play, setCurrent) {
+	console.log('addSong(' + url + ', ' + offset + ', ' + play + ', ' + setCurrent + ')');
 
 	// update current song info
-	var containsSong = false;
-	var containsSongCurrentlyPlaying = false;
+	var containsSongIndex = -1;
 
 	// check if we have the song already
 	for (idx in songs) {
 		if (songs[idx].id == url) {
-			containsSong = true;
-			containsSongCurrentlyPlaying = (idx == 0);
+			containsSongIndex = idx;
 			break;
 		}
 	}
 
-	console.log('\t' + containsSong + ', ' + containsSongCurrentlyPlaying);
+	console.log('\t' + containsSongIndex);
 
-	// TODO: handle forcePlay with more than one song in playlist
-
-	// if not, add it to list
-	if (!containsSong) {
+	// we don't have song, add it to list
+	if (containsSongIndex == -1) {
 		songs.push(new Song(url, 'serve/' + url, offset));
 		loadSong();
+
+		// if we get a force play, stop current song, cleanup all songs
+		if (setCurrent) {
+			console.log('\tremoving any existing songs from playlist (do not have song)');
+			stopSong();
+
+			while (songs.length > 1) {
+				songs.shift().cleanup();
+			}
+		}
+
 		updateSongList();
 		
 		// play song immediately if its the only song
@@ -376,12 +390,33 @@ function addSong(url, offset, play, forcePlay) {
 			}
 		}
 	}
-	// otherwise we may be playing/pausing current song
-	else if (containsSongCurrentlyPlaying) {
+	// we have song and its currently playing
+	else if (containsSongIndex == 0) {
 		if (play) {
 			playSong(offset);
 		} else {
 			pauseSong();
+		}
+	}
+	// we have song in the playlist
+	else {
+		
+		if (setCurrent) {
+			console.log('\tremoving songs from playlist (have song)');
+			stopSong();
+
+			var temp = containsSongIndex;
+
+			while (temp > 0) {
+				songs.shift().cleanup();
+				temp--;
+			}
+
+			updateSongList();
+
+			if (play) {
+				playSong(offset);
+			}
 		}
 	}
 
@@ -395,10 +430,8 @@ function uploadSong() {
 
 	// TODO: leave session if currently in someone else's session
 	if (hostingIndex == -1) {
-		
+		hostingIndex = 0;
 	}
-
-	hostingIndex++;
 
 	// fill in other args before upload
 	$('#upload_song_form_filename').val($('#upload_song_form_file').val().replace('C:\\fakepath\\', ''));

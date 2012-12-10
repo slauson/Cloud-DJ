@@ -45,7 +45,7 @@ function setup() {
 		// TODO: setup logout
 		$('#logout').click(logout);
 		$('#upload_song_form').change(uploadSong);
-		$('#toggle_mute').click(userToggleMuteSong);
+		$('#toggle_mute').click(userToggleMute);
 		$('#pause_button').click(userPauseSong);
 		$('#play_button').click(userPlaySong);
 		$('#next_button').click(userNextSong);
@@ -191,11 +191,15 @@ function getSessionDetails() {
 }
 
 /*
-   Toggle mute of current song
+   Toggle mute of all songs
  */
-function userToggleMuteSong() {
-	if (songs.length > 0) {
-		songs[0].toggleMute();
+function userToggleMute() {
+	if (soundManager.ok()) {
+		if (songs.length > 0 && songs[0].isMuted()) {
+			soundManager.unmute();
+		} else {
+			soundManager.mute();
+		}
 	}
 }
 
@@ -209,12 +213,7 @@ function userPauseSong() {
 	if (!isSongPaused()) {
 		pauseSong();
 
-		$.post('/update',
-			{'session_key': server_session_key, 'curIdx': hostingIndex, 'play': 0, 'endflag': 0, 'num': 0},
-			function(message) {
-				console.log('/update response:' + message);
-			}
-		);
+		updateChannel(0, 0, 0);
 	}
 }
 
@@ -228,12 +227,7 @@ function userPlaySong() {
 	if (isSongPaused()) {
 		playSong(-1);
 
-		$.post('/update',
-			{'session_key': server_session_key, 'curIdx': hostingIndex, 'play': 1, 'endflag': 0, 'num': -getSongPlayback()},
-			function(message) {
-				console.log('/update response:' + message);
-			}
-		);
+		updateChannel(1, 0, -getSongPlayback());
 	}
 }
 
@@ -242,6 +236,11 @@ function userPlaySong() {
  */
 function userNextSong() {
 	// check if we have another song
+	if (songs.length <= 1) {
+		alert('Add a song before skipping it');
+	} else {
+		nextSong();
+	}
 }
 
 /*

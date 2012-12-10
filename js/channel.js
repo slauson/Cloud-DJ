@@ -37,9 +37,9 @@ channelOnClose = function() {
 /*
    Updates channel when user is host
  */
-function updateChannel() {
+function updateChannel(play, endflag, num) {
 	$.post('/update',
-		{'curIdx': hostingIndex, 'play': true, 'endflag': false, 'session_key': server_session_key},
+		{'session_key': server_session_key, 'curIdx': hostingIndex, 'play': play, 'endflag': endflag, 'num': num},
 		function(message) {
 			console.log('/update response:' + message);
 		}
