@@ -100,7 +100,7 @@ function handleServerMessage(message) {
 
 	// fix weird json encoding issues (http://stackoverflow.com/questions/9036429/convert-object-string-to-json)
 	//message = $.parseJSON(JSON.stringify(eval('(' + message.data + ')')));
-	while (typeof message == "string") {
+	while (typeof message == 'string') {
 		message = JSON.parse(message);
 	}
 
@@ -115,7 +115,7 @@ function handleServerMessage(message) {
 		listeners = new Array();
 
 		// only add host if its not us
-		if (hostingIndex == -1 && message.hostEmail != server_me_email) {
+		if (hostingIndex == -1 && message.hostEmail && message.hostEmail != server_me_email) {
 			listeners.push(new Listener(message.hostEmail + ' (host)'));
 		}
 		if (message.listeners) {
@@ -136,17 +136,27 @@ function handleServerMessage(message) {
 		// check if we have song
 		if (message.curSongKey) {
 
+			// check if we are joining a session we hosted
+			if (songs.length == 0 && typeof message.curSongIdx != 'undefined' && message.hostEmail && message.hostEmail == server_me_email) {
+
+				console.log('join existing hosted session with index ' + message.curSongIdx);
+				hostingIndex = message.curSongIdx
+
+				// enable buttons
+				$('#pause_button').removeAttr('disabled');
+				$('#play_button').removeAttr('disabled');
+				$('#next_button').removeAttr('disabled');
+			}
+
 			// check if we should play/pause
-			var play = typeof message.play == "undefined" || message.play;
+			var play = typeof message.play == 'undefined' || message.play;
 
 			// check if we have timestamp
 			if (message.timestamp) {
 
 				// calculate offset to start playing song
 				var now = Math.round((new Date()).getTime() / 1000);
-
 				var offset = now - message.timestamp;
-
 				console.log('offsets: ' + message.timestamp + ', ' + now + ', ' + offset);
 
 				addSong(message.curSongKey, offset, play, true);
@@ -166,15 +176,16 @@ function handleServerMessage(message) {
 	
 	// add newly uploaded song, play if hosting (for initial upload)
 	if (message.newSongKey) {
-		var play = typeof message.play == "undefined" || message.play;
-		addSong(message.newSongKey, 0, play, false);
+		console.log('newSongKey: ' + message.play);
+		addSong(message.newSongKey, 0, hostingIndex >= 0, false);
 	}
 
 	// session was killed
 	if (message.endFlag) {
-		alert(server_host + " has ended the session. Please join or start a session.");
+		alert(server_host + ' has ended the session. Please join or start a session.');
 		stopSong();
 	}
+
 }
 
 /*
@@ -242,7 +253,7 @@ function userPlaySong() {
 function userNextSong() {
 	// check if we have another song
 	if (songs.length <= 1) {
-		alert('Add a song before skipping it');
+		alert('Please add another song before skipping.');
 	} else {
 		nextSong();
 	}
@@ -272,7 +283,7 @@ function getUploadUrl() {
 		function(message) {
 			console.log('/generate_upload_url response:' + message);
 
-			$("#upload_song_form").attr("action", message);
+			$('#upload_song_form').attr('action', message);
 		}
 	);
 }

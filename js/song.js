@@ -120,7 +120,7 @@ function Song(id, url, position) {
 	// only actually sets position if we have loaded data up to that point
 	this.setPosition = function(offset) {
 		console.log('setPosition(' + offset + ')');
-		if (offset != 0 && (typeof this.sound.loaded == "undefined" ||
+		if (offset != 0 && (typeof this.sound.loaded == 'undefined' ||
 				!this.sound.loaded || (this.sound.duration && offset * 1000 < this.sound.duration)))
 		{
 			this.sound.setPosition(offset * 1000);
@@ -303,10 +303,10 @@ function nextSong() {
 		// check if song list is empty
 		if (songs.length == 0) {
 			if (hostingIndex != -1) {
-				alert("Please choose another song to continue your session.");
+				alert('Please choose another song to continue your session.');
 				// TODO: send some kind of update to server?
 			} else {
-				alert("Session host has not chosen the next song.");
+				alert('Session host has not chosen the next song.');
 			}
 		}
 		// otherwise play next song

@@ -10,6 +10,8 @@ from google.appengine.api import channel
 from google.appengine.api import users
 from google.appengine.ext import db
 from google.appengine.ext import webapp
+from google.appengine.api import app_identity 
+
 from google.appengine.ext.webapp.util import run_wsgi_app
 
 import string
@@ -143,8 +145,8 @@ class MainPage(webapp.RequestHandler):
 
 
         # Deployed version:
-        # session_link = 'http://cloud-dj.appspot.com/?session_key=' + session_key
-        session_link = 'http://localhost:8080/?session_key=' + session_key
+        session_link = 'http://2.' + app_identity.get_default_version_hostname() + '/?session_key=' + session_key
+        #session_link = 'http://localhost:8080/?session_key=' + session_key
         logout_link = users.create_logout_url('/')
 
         if session:

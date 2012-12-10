@@ -100,7 +100,7 @@ function joinSession(sessionId) {
 	
 	// if we are in an active session, confirm
 	if (songs.length > 0) {
-		answer = confirm ("Are you sure you want to leave your current session?");
+		answer = confirm ('Are you sure you want to leave your current session?');
 	}
 	
 	if (answer) {
