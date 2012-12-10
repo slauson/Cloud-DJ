@@ -1,13 +1,13 @@
 
 /*
- This file contains song related objects/methods.
+   This file contains song related objects/methods.
  */
 
 
 /*
- ---------------------------------------
- Song object (basically a wrapper around soundmanager2's sound object)
- ---------------------------------------
+   ---------------------------------------
+   Song object (basically a wrapper around soundmanager2's sound object)
+   ---------------------------------------
  */
 function Song(id, url, position) {
 	console.log('new Song: ' + id + ', ' + url + ', ' + position);
@@ -30,10 +30,6 @@ function Song(id, url, position) {
 		onfinish:function() {
 			console.log(this.id + ' done playing');
 
-			// hide playback/loading info
-			//$('#song_playback').hide();
-			//$('#song_loading').hide();
-
 			// go to next song
 
 			// wait for host update before going to next song
@@ -43,7 +39,7 @@ function Song(id, url, position) {
 			console.log(this.id + ' loading (' + this.bytesLoaded + ' / ' + this.bytesTotal + ')');
 
 			// update loading bar/percentage only if song is currently playing
-			if (this.playState == 1) {
+			if (this.playState == 1 || this.paused) {
 				var str = Math.floor((this.bytesLoaded/this.bytesTotal)*100) + '% Loaded';
 
 				if (str != $('#song_loading').html) {
@@ -55,10 +51,9 @@ function Song(id, url, position) {
 			// update time of song
 			var str = getTimeStr(this.position/1000) + ' / ' + getTimeStr(this.duration/1000);
 			
-			if (str != $('#song_playback').html) {
+			if (str != $('#song_playback').html && this.position < this.duration && !this.paused) {
 				$('#song_playback').html(str);
 			}
-			//console.log(this.id + ' playing (' + this.position + ' / ' + this.duration + ')');
 		},
 		onid3:function() {
 			console.log('onid3: ' + this.playState);
@@ -67,8 +62,8 @@ function Song(id, url, position) {
 				console.log(prop + ': ' + this.id3[prop]);
 			}
 
-			// update properties if song is already playing
-			if (this.playState == 1) {
+			// update properties if song is already playing or is paused
+			if (this.playState == 1 || this.paused) {
 				setSongProperties();
 			}
 			// otherwise update up next list
@@ -89,6 +84,23 @@ function Song(id, url, position) {
 		this.sound.stop()
 	}
 	
+	// pause song
+	this.pause = function() {
+		this.sound.pause()
+		$('#song_playback').html($('#song_playback').html() + ' (Paused)');
+	}
+
+	// returns true if song is paused
+	this.isPaused = function() {
+		return this.sound.paused;
+	}
+
+	// return current playback position in seconds
+	this.getPlayback = function() {
+		console.log('getPlayback: ' + this.sound.position);
+		return Math.floor(this.sound.position / 1000);
+	}
+
 	// mute song
 	this.toggleMute = function() {
 		this.sound.toggleMute();
@@ -175,31 +187,35 @@ function Song(id, url, position) {
 }
 
 /*
- ---------------------------------------
- Methods
- ---------------------------------------
+   ---------------------------------------
+   Methods
+   ---------------------------------------
+   1355122331.0,
+   1355122357.0
+   1355122388.0
  */
 
 /*
- Start current song
+   Play current song
  */
-function startSong(offset) {
-	console.log('startSong(' + offset + ')');
+function playSong(offset) {
+	console.log('playSong(' + offset + ')');
 
 	if (songs.length > 0) {
-		//songs[0].setPosition(offset);
-		songs[0].play();
 
-		// show playback/loading info
-		$('#song_playback').show();
-		$('#song_loading').show();
+		// only set position if song is paused and at beginning
+		if (offset >= 0 && songs[0].isPaused() && songs[0].getPlayback() < 2) {
+			songs[0].setPosition(offset);
+		}
+
+		songs[0].play();
 
 		songs[0].setProperties();
 	}
 }
 
 /*
- Stop current song
+   Stop current song
  */
 function stopSong() {
 	if (songs.length > 0) {
@@ -208,14 +224,43 @@ function stopSong() {
 }
 
 /*
- Toggle mute of current song
+   Stop current song
  */
-function toggleMuteSong() {
+function stopSong() {
 	if (songs.length > 0) {
-		songs[0].toggleMute();
+		songs[0].stop();
 	}
 }
 
+/*
+   Pause current song
+ */
+function pauseSong() {
+	if (songs.length > 0) {
+		songs[0].pause();
+	}
+}
+
+/*
+   Returns current song playback in seconds
+ */
+function getSongPlayback() {
+	if (songs.length > 0) {
+		return songs[0].getPlayback();
+	} else {
+		return 0;
+	}
+}
+
+/*
+   Returns true if current song is paused
+ */
+function isSongPaused() {
+	return songs.length == 0 || songs[0].isPaused();
+}
+/*
+   Updates song title, artist, album
+ */
 function setSongProperties() {
 	if (songs.length > 0) {
 		songs[0].setProperties();
@@ -223,12 +268,10 @@ function setSongProperties() {
 }
 
 /*
- Loads next song if possible
+   Loads next song if possible
  */
 function loadSong() {
 	console.log('loadSong');
-
-	// TODO: check for more songs on server
 
 	for (idx in songs) {
 		// check if song is not loaded yet
@@ -244,7 +287,7 @@ function loadSong() {
 }
 
 /*
- Plays next song if possible
+   Plays next song if possible
  */
 function nextSong() {
 	console.log('nextSong');
@@ -256,7 +299,7 @@ function nextSong() {
 		if (songs.length == 0) {
 			if (hostingIndex != -1) {
 				alert("Please choose another song to continue your session.");
-				// TODO: send update to server
+				// TODO: send some kind of update to server?
 			} else {
 				alert("Session host has not chosen the next song.");
 			}
@@ -267,7 +310,7 @@ function nextSong() {
 			if (hostingIndex != -1) {
 				updateChannel();
 			}
-			startSong(0);
+			playSong(0);
 		}
 
 		updateSongList();
@@ -275,7 +318,7 @@ function nextSong() {
 }
 
 /*
- Updates song list from song array
+   Updates song list from song array
  */
 function updateSongList() {
 
@@ -289,23 +332,29 @@ function updateSongList() {
 }
 
 /*
- Adds song to list if we don't already have it
-  - url: url of song to add
-  - offset: offset of playing song
-  - forcePlay: force song to play immediately (host skipped song or we just joined session)
+   Adds song to list if we don't already have it
+    - url: url of song to add
+    - offset: offset of playing song
+    - play: play song
+    - forcePlay: force song to play immediately (host skipped song or we just joined session)
  */
-function addSong(url, offset, forcePlay) {
-	console.log('addSong(' + url + ', ' + offset + ', ' + forcePlay + ')');
+function addSong(url, offset, play, forcePlay) {
+	console.log('addSong(' + url + ', ' + offset + ', ' + play + ', ' + forcePlay + ')');
 
 	// update current song info
 	var containsSong = false;
+	var containsSongCurrentlyPlaying = false;
+
 	// check if we have the song already
 	for (idx in songs) {
-		if (songs[idx].url == url) {
+		if (songs[idx].id == url) {
 			containsSong = true;
+			containsSongCurrentlyPlaying = (idx == 0);
 			break;
 		}
 	}
+
+	console.log('\t' + containsSong + ', ' + containsSongCurrentlyPlaying);
 
 	// TODO: handle forcePlay with more than one song in playlist
 
@@ -317,13 +366,29 @@ function addSong(url, offset, forcePlay) {
 		
 		// play song immediately if its the only song
 		if (songs.length == 1) {
-			startSong(offset);
+			if (play) {
+				playSong(offset);
+			} else {
+				pauseSong();
+
+				// update song properties
+				setSongProperties();
+			}
 		}
 	}
+	// otherwise we may be playing/pausing current song
+	else if (containsSongCurrentlyPlaying) {
+		if (play) {
+			playSong(offset);
+		} else {
+			pauseSong();
+		}
+	}
+
 }
 
 /*
- Upload song to server
+   Upload song to server
  */
 function uploadSong() {
 	console.log('uploadSong');
@@ -334,8 +399,6 @@ function uploadSong() {
 	}
 
 	hostingIndex++;
-
-	// add another song to playlist
 
 	// fill in other args before upload
 	$('#upload_song_form_filename').val($('#upload_song_form_file').val().replace('C:\\fakepath\\', ''));
@@ -349,4 +412,9 @@ function uploadSong() {
 
 	// clear filename in input form
 	$('#upload_song_form')[0].reset();
+
+	// enable pause/play/next buttons
+	$('#pause_button').removeAttr('disabled');
+	$('#play_button').removeAttr('disabled');
+	$('#next_button').removeAttr('disabled');
 }

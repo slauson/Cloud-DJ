@@ -82,7 +82,7 @@ class MainPage(webapp.RequestHandler):
             # No session specified, create a new one, make this the host 
             # session_key = user.user_id()
             session_key = session_key_gen()
-            curTime = datetime.now()
+            curTime = datetime.datetime.now()
             session = Session(key_name = session_key,   # Key for the db.Model. 
                               host = user,
                               curSongIdx = 0,
@@ -187,11 +187,6 @@ class RemoveListener(webapp.RequestHandler):
 #             ACLHandler().remove(user.user_id, userid)
         
 
-class TestPage(webapp.RequestHandler):
-    def get(self):
-        template = jinja_environment.get_template('index.html')
-        self.response.out.write(template.render({}))
-        
 jinja_environment = jinja2.Environment(
     loader=jinja2.FileSystemLoader(os.path.dirname(__file__)))
 app = webapp.WSGIApplication(
@@ -206,8 +201,7 @@ app = webapp.WSGIApplication(
      ('/upload', UploadSong),
      ('/add_listener', AddListener),
      ('/sessions', GetLiveSessions),
-     ('/serve/([^/]+)?', ServeSong),
-     ('/test', TestPage)], debug=True)
+     ('/serve/([^/]+)?', ServeSong)], debug=True)
 
 def session_key_gen():
     chars=string.ascii_letters + string.digits

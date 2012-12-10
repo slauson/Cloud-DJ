@@ -1,9 +1,9 @@
 import urllib
 import logging
 import time
+import datetime
 
 from django.utils import simplejson
-from datetime import datetime
 
 from google.appengine.api import channel
 from google.appengine.api import users
@@ -96,14 +96,14 @@ class SessionUpdater():
         playlist = self.session.playlist
         idx = self.session.curSongIdx
         
-        if not playlist or not idx:
+        if not playlist or idx < 0:
             return
         
         song = Song.get(playlist[idx])
         sessionUpdate = {
 #            'title': song.title,
 #            'artist': song.artist,
-            'curSongKey': str(song.blob_key),
+            'curSongKey': str(song.blob_key.key()),
             'play': self.session.play,
             'endFlag': self.session.endFlag,
             'timestamp': str(time.mktime(self.session.timestamp.timetuple()))
@@ -114,8 +114,7 @@ class SessionUpdater():
     # Send the most recently added blob key
     def get_blob_message(self, blob_key):
         sessionUpdate = {
-            # don't use blob.key() here since we pass that in
-            'newSongKey': str(blob_key)
+            'newSongKey': str(blob_key.key())
         }
         logging.info('get_blob_message: ' + str(sessionUpdate))
         return simplejson.dumps(sessionUpdate)
@@ -126,6 +125,7 @@ class SessionUpdater():
     # Update song, play, endFlag
     # idx = index into playlist, play = bool, endFlag = bool
     def update_song(self, idx, play, endFlag, timestamp):
+        logging.info('update_song: ' + str(idx) + ', ' + str(play) + ', ' + str(endFlag) + ', ' + str(timestamp))
         self.session.curSongIdx = idx
         self.session.play = play
         self.session.endFlag = endFlag
@@ -185,7 +185,7 @@ class SessionFromRequest():
     
 class SessionListUpdater():
     user = None;
-    def __init__(self, request):
+    def __init__(self):
         self.user = users.get_current_user()
       
     # Send the message  
@@ -235,22 +235,27 @@ class UpdateChannel(webapp.RequestHandler):
     def post(self):
         session = SessionFromRequest(self.request).get_session()
         user = users.get_current_user()
+        logging.info('UpdateChannel: ' + str(self.request))
+
         if session and user == session.host:
-            curIdx = self.request.get('curIdx')   # Index of the current song
-            if (curIdx < len(session.playlist)):
-                play = self.request.get('play')
-                endFlag = self.request.get('endflag')
-                timestamp = datetime.now()
-                if not endFlag:
-                    endFlag = False
-                if not play:
-                    play = True
+            curIdx = int(self.request.get('curIdx'))   # Index of the current song
+            if (int(curIdx) < len(session.playlist)):
+                play = int(self.request.get('play')) == 1
+                endFlag = int(self.request.get('endflag')) == 1
+                num = int(self.request.get('num'))
+
+                timestamp = datetime.datetime.now()
+                # use num to offset timestamp so that we account for what has already played
+                if play:
+                    timestamp = timestamp + datetime.timedelta(0, num)
+
                 SessionUpdater(session).update_song(curIdx, play, endFlag, timestamp)
                 
                 song = Song.get(session.playlist[curIdx])
                 message = { "updateSesStr": str(session.host.email()) + "," + str(session.key().name()) + "," + str(song.filename) 
                 }
-                SessionListUpdater().send_update(simplejson.dumps(message))   # Send only the change
+                # TODO: uncomment this once ACLs are working
+                #SessionListUpdater().send_update(simplejson.dumps(message))   # Send only the change
 
 # Remove self from listeners
 # /remove
@@ -300,14 +305,15 @@ class UploadSong(blobstore_handlers.BlobstoreUploadHandler):
         if (session and session.host == users.get_current_user()):
             upload_files = self.get_uploads('file')
             if (session.curSongIdx == 0):
-                session.timestamp = datetime.now()
+                session.timestamp = datetime.datetime.now()
+                session.play = True
                 session.put()
                 
             blob_info = upload_files[0]
             # add the song to datastore
             SessionUpdater(session).add_song(blob_info.key(), filename)
             # Send message to everyone in the channel with the new blob key
-            SessionUpdater(session).send_update(SessionUpdater(session).get_blob_message(blob_info.key()))
+            SessionUpdater(session).send_update(SessionUpdater(session).get_blob_message(blob_info))
         
      
 # Serve a song only if the session is valid and if play mode is on
