@@ -1,5 +1,6 @@
 import urllib
 import logging
+import time
 
 from django.utils import simplejson
 from datetime import datetime
@@ -50,27 +51,26 @@ class SessionUpdater():
     def send_update(self, message):
         #message = self.get_session_message()
         if not message:
-            return
-        try:
-            channel.send_message(self.session.host.user_id() + '_' + self.session.key().id_or_name(), message)
-        finally:
-            logging.info('send_message to ' + str(self.session.host.user_id() + '_' + self.session.key().id_or_name()) + ': ' + str(message))
-            
-            for lst in self.session.listeners:
-                channel.send_message(lst.user_id() + '_' + self.session.key().id_or_name(), message)
-                logging.info('send_message to ' + str(lst.user_id() + '_' + self.session.key().id_or_name()) + ': ' + str(message))
+            return   
+        logging.info('send_message to ' + str(self.session.host.user_id() + '_' + self.session.key().id_or_name()) + ': ' + str(message))
+        channel.send_message(self.session.host.user_id() + '_' + self.session.key().id_or_name(), message)
+        
+        for lst in self.session.listeners:
+            logging.info('send_message to ' + str(lst.user_id() + '_' + self.session.key().id_or_name()) + ': ' + str(message))
+            channel.send_message(lst.user_id() + '_' + self.session.key().id_or_name(), message)
 
     # Update message for non-incremental updates
     # Returns entire model  
     def get_session_message(self):
         playlist = self.session.playlist
         idx = self.session.curSongIdx
+
         sessionUpdate = {
             'host': self.session.host.user_id(),
             'hostEmail': self.session.host.email(),
             'play': self.session.play,              # Tell the client to play or not
             'endFlag': self.session.endFlag,         # Session end or not
-            'timestamp':self.session.timestamp.time.__str__()
+            'timestamp': time.mktime(self.session.timestamp.timetuple())
         }
         listeners_list = []
         for listener in self.session.listeners:
@@ -88,6 +88,7 @@ class SessionUpdater():
                 s = Song.get(playlist[i])
                 upcomingSongs.append(str(s.blob_key.key()))
             sessionUpdate['playlist']= upcomingSongs
+        logging.info('get_session_message: ' + str(sessionUpdate))
         return simplejson.dumps(sessionUpdate)
     
     # Update song information only
@@ -105,7 +106,7 @@ class SessionUpdater():
             'curSongKey': str(song.blob_key),
             'play': self.session.play,
             'endFlag': self.session.endFlag,
-            'timestamp': self.session.timestamp.time.__str__()
+            'timestamp': str(time.mktime(self.session.timestamp.timetuple()))
         }
         logging.info('get_song_message: ' + str(sessionUpdate))
         return simplejson.dumps(sessionUpdate)
