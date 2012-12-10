@@ -80,6 +80,7 @@ class SessionUpdater():
             song = Song.get(playlist[idx])
 #            sessionUpdate['title']= song.title                  # Current song title
 #            sessionUpdate['artist']= song.artist                 # Current song artist
+            sessionUpdate['curSongIdx']= idx                      # Current song index. (Used for reinitializing host on connection loss)
             sessionUpdate['curSongKey']= str(song.blob_key.key())        # Current song blob key. Serve url: /serve/blob_key
             upcomingSongs = []         # send upcoming playlist so new listeners can load songs
 
@@ -304,6 +305,8 @@ class UploadSong(blobstore_handlers.BlobstoreUploadHandler):
 #        artist = self.request.get('artist')
         if (session and session.host == users.get_current_user()):
             upload_files = self.get_uploads('file')
+
+            # automatically play first song so we don't have to send separate update
             if (session.curSongIdx == 0):
                 session.timestamp = datetime.datetime.now()
                 session.play = True
