@@ -25,7 +25,7 @@ channelOnMessage = function(message) {
 }
 
 channelOnError = function(error) {
-	alert('channel error: ' + error.description + '(' + error.code + ')');
+	console.log('channel error: ' + error.description + '(' + error.code + ')');
 }
 
 channelOnClose = function() {

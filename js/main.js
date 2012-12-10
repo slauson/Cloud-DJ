@@ -103,13 +103,21 @@ function setup() {
 	'play': self.session.play,
 	'endFlag': self.session.endFlag
  */
+var savedMessage;
 function handleServerMessage(message) {
 	
 	console.log('handleServerMessage');
 	console.log(message.data);
 
+	message = message.data;
+
+	savedMessage = message;
+
 	// fix weird json encoding issues (http://stackoverflow.com/questions/9036429/convert-object-string-to-json)
-	message = $.parseJSON(JSON.stringify(eval('(' + message.data + ')')));
+	//message = $.parseJSON(JSON.stringify(eval('(' + message.data + ')')));
+	while (typeof message == "string") {
+		message = JSON.parse(message);
+	}
 
 	// add host to listeners list
 	//host = message.host;
@@ -132,21 +140,34 @@ function handleServerMessage(message) {
 		}
 		updateListenerList();
 	}
-
 	
+	// check if we have song
 	if (message.curSongKey) {
-		// check if we have song
-		addSong(message.curSongKey, true);
+
+		// check if we have timestamp
+		if (message.timestamp) {
+			console.log('2');
+
+			// calculate offset to start playing song
+			var now = Math.round((new Date()).getTime() / 1000);
+
+			var offset = now - message.timestamp;
+
+			addSong(message.curSongKey, offset, true);
+		} else {
+			console.log('2b');
+			addSong(message.curSongKey, 0, true);
+		}
 	}
 
 	if (message.newSongKey) {
-		addSong(message.newSongKey, false);
+		addSong(message.newSongKey, 0, false);
 	}
 
     // update upcoming songs
 	if (message.playlist) {
 		for (idx in message.playlist) {
-			addSong(message.playlist[idx], false);
+			addSong(message.playlist[idx], 0, false);
 		}
 	}
 	

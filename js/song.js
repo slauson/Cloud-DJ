@@ -17,7 +17,7 @@ function Song(id, url, position) {
 	this.sound = soundManager.createSound({
 		id: id,
 		url: url,
-		position: position,
+		position: position*1000,
 		autoLoad: false,
 		autoPlay: false,
 		onload:function() {
@@ -99,6 +99,17 @@ function Song(id, url, position) {
 		this.sound.load();
 	}
 
+	// sets song position in seconds
+	// only actually sets position if we have loaded data up to that point
+	this.setPosition = function(offset) {
+		console.log('setPosition(' + offset + ')');
+		if (offset != 0 && (typeof this.sound.loaded == "undefined" ||
+				!this.sound.loaded || (this.sound.duration && offset * 1000 < this.sound.duration)))
+		{
+			this.sound.setPosition(offset * 1000);
+		}
+	}
+
 	// cleanup song
 	this.cleanup = function() {
 		this.sound.destruct();
@@ -172,10 +183,11 @@ function Song(id, url, position) {
 /*
  Start current song
  */
-function startSong() {
-	console.log('startSong');
+function startSong(offset) {
+	console.log('startSong(' + offset + ')');
 
 	if (songs.length > 0) {
+		//songs[0].setPosition(offset);
 		songs[0].play();
 
 		// show playback/loading info
@@ -255,7 +267,7 @@ function nextSong() {
 			if (hostingIndex != -1) {
 				updateChannel();
 			}
-			startSong();
+			startSong(0);
 		}
 
 		updateSongList();
@@ -278,8 +290,13 @@ function updateSongList() {
 
 /*
  Adds song to list if we don't already have it
+  - url: url of song to add
+  - offset: offset of playing song
+  - forcePlay: force song to play immediately (host skipped song or we just joined session)
  */
-function addSong(url, forcePlay) {
+function addSong(url, offset, forcePlay) {
+	console.log('addSong(' + url + ', ' + offset + ', ' + forcePlay + ')');
+
 	// update current song info
 	var containsSong = false;
 	// check if we have the song already
@@ -290,15 +307,17 @@ function addSong(url, forcePlay) {
 		}
 	}
 
+	// TODO: handle forcePlay with more than one song in playlist
+
 	// if not, add it to list
 	if (!containsSong) {
-		songs.push(new Song(url, 'serve/' + url, 0));
+		songs.push(new Song(url, 'serve/' + url, offset));
 		loadSong();
 		updateSongList();
 		
 		// play song immediately if its the only song
 		if (songs.length == 1) {
-			startSong();
+			startSong(offset);
 		}
 	}
 }
