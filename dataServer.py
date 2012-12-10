@@ -49,7 +49,6 @@ class SessionUpdater():
     
     # Update channel clients with the specified message
     def send_update(self, message):
-        #message = self.get_session_message()
         if not message:
             return   
         logging.info('send_message to ' + str(self.session.host.user_id() + '_' + self.session.key().id_or_name()) + ': ' + str(message))
@@ -221,6 +220,7 @@ class ChannelDisconnect(webapp.RequestHandler):
 class Logout(webapp.RequestHandler):
     def get(self):
         user = users.get_current_user()
+        # Remove self from current session
         session = SessionFromRequest(self.request).get_session() 
         if (session and user == session.host):
             SessionUpdater(session).remove_session()
@@ -269,7 +269,7 @@ class GetLiveSessions(webapp.RequestHandler):
 #           user = users.get_current_user()
         if session:
             # TODO: filter wasn't returning any results
-            sessionList = Session.all()#.filter('endFlag =', False)
+            sessionList = Session.all().filter('endFlag =', False).run()
             msg = ""
             for ses in sessionList:
                 if ses.curSongIdx < len(ses.playlist):

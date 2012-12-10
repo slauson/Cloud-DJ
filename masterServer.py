@@ -80,16 +80,21 @@ class MainPage(webapp.RequestHandler):
 
         if not session_key:
             # No session specified, create a new one, make this the host 
-            # session_key = user.user_id()
-            session_key = session_key_gen()
-            curTime = datetime.now()
-            session = Session(key_name = session_key,   # Key for the db.Model. 
-                              host = user,
-                              curSongIdx = 0,
-                              play = False,
-                              eFlag = False,
-                              timestamp = curTime)
-            session.put()
+            # If this user is already hosting, connect them to the existing session
+            q = Session.all().filter("host =", user)
+            session = q.get()
+            if not session:
+                session_key = session_key_gen()
+                curTime = datetime.now()
+                session = Session(key_name = session_key,   # Key for the db.Model. 
+                                  host = user,
+                                  curSongIdx = 0,
+                                  play = False,
+                                  endFlag = False,
+                                  timestamp = curTime)
+                session.put()
+            else:
+                session_key = session.key().name()
         else:
             # Session exists 
             session = Session.get_by_key_name(session_key)
@@ -105,6 +110,12 @@ class MainPage(webapp.RequestHandler):
                 session.listeners.append(user)
                 session.put()
                 SessionUpdater(session).send_update(SessionUpdater(session).get_session_message())
+
+            # Close any sessions where this user is the host?
+                    # Perform cleanup where we remove any sessions for which we are the host
+            q = Session.all().filter('host =', user)
+            for ses in q.run(read_policy=db.STRONG_CONSISTENCY):
+                SessionUpdater(ses).remove_session()
 
         ACL = findACL(user.user_id())
         # if user has no ACL, create one with no listeners and no potential sessions
