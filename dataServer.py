@@ -138,8 +138,12 @@ class SessionUpdater():
     def remove_listener(self, user):
         self.session.listeners.remove(user)
         self.session.put()
+        listeners = []
+        for lst in self.session.listeners:
+            listeners.append(lst.email())
+            
         sessionUpdate = {
-            'listeners': self.session.listeners
+            'listeners': listeners
         }
         message = simplejson.dumps(sessionUpdate)
         self.send_update(message)

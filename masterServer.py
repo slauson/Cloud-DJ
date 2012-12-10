@@ -124,6 +124,8 @@ class MainPage(webapp.RequestHandler):
         addlog.put()
 
 
+        # Deployed version:
+        # session_link = 'http://cloud-dj.appspot.com/?session_key=' + session_key
         session_link = 'http://localhost:8080/?session_key=' + session_key
         logout_link = users.create_logout_url('/')
 
