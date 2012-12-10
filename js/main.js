@@ -166,7 +166,8 @@ function handleServerMessage(message) {
 	
 	// add newly uploaded song, play if hosting (for initial upload)
 	if (message.newSongKey) {
-		addSong(message.newSongKey, 0, hostingIndex != -1, false);
+		var play = typeof message.play == "undefined" || message.play;
+		addSong(message.newSongKey, 0, play, false);
 	}
 
 	// session was killed

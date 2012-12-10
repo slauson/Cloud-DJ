@@ -359,7 +359,7 @@ function addSong(url, offset, play, setCurrent) {
 		}
 	}
 
-	console.log('\t' + containsSongIndex);
+	console.log('containsSongIndex:\t' + containsSongIndex);
 
 	// we don't have song, add it to list
 	if (containsSongIndex == -1) {
