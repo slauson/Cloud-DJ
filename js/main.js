@@ -115,12 +115,16 @@ function handleServerMessage(message) {
 		listeners = new Array();
 
 		// only add host if its not us
-		if (hostingIndex == -1 && message.hostEmail && message.hostEmail != server_me_email) {
+		if (hostingIndex == -1 && message.hostEmail != server_me_email) {
 			listeners.push(new Listener(message.hostEmail + ' (host)'));
 		}
 		if (message.listeners) {
 			for (idx in message.listeners) {
-				listeners.push(new Listener(message.listeners[idx]));
+
+				// only add listener entry if its not us
+				if (message.listeners[idx] != server_me_email) {
+					listeners.push(new Listener(message.listeners[idx]));
+				}
 			}
 		}
 		updateListenerList();
