@@ -141,36 +141,41 @@ function handleServerMessage(message) {
 		updateListenerList();
 	}
 	
-	// check if we have song
-	if (message.curSongKey) {
+	// add upcoming current songs only if listener
+	if (hostingIndex == -1) {
 
-		// check if we have timestamp
-		if (message.timestamp) {
-			console.log('2');
+		// check if we have song
+		if (message.curSongKey) {
 
-			// calculate offset to start playing song
-			var now = Math.round((new Date()).getTime() / 1000);
+			// check if we have timestamp
+			if (message.timestamp) {
+				console.log('2');
 
-			var offset = now - message.timestamp;
+				// calculate offset to start playing song
+				var now = Math.round((new Date()).getTime() / 1000);
 
-			addSong(message.curSongKey, offset, true);
-		} else {
-			console.log('2b');
-			addSong(message.curSongKey, 0, true);
+				var offset = now - message.timestamp;
+
+				addSong(message.curSongKey, offset, true);
+			} else {
+				console.log('2b');
+				addSong(message.curSongKey, 0, true);
+			}
+		}
+
+		// update upcoming songs
+		if (message.playlist) {
+			for (idx in message.playlist) {
+				addSong(message.playlist[idx], 0, false);
+			}
 		}
 	}
-
+	
+	// add newly uploaded song
 	if (message.newSongKey) {
 		addSong(message.newSongKey, 0, false);
 	}
 
-    // update upcoming songs
-	if (message.playlist) {
-		for (idx in message.playlist) {
-			addSong(message.playlist[idx], 0, false);
-		}
-	}
-	
 	// session was killed
 	if (message.endFlag) {
 		alert(server_host + " has ended the session. Please join or start a session.");
