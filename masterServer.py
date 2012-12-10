@@ -25,16 +25,17 @@ class LoggedInUsers(db.Model):
     """
     userid = db.StringProperty()
 
-class ACLEntry(db.Model):
-    """
-    Individual ACL (Access Control List) entry. 
-    Keeps track for each user who can listen to their sessions (potential listeners) 
-    and which sessions the user can listen to (potential sessions) 
-    """
-    host       = db.UserProperty()                       # User 
-    sessionkey = db.StringProperty()                     # user's session key - server can recreate channel ID
-    plisteners = db.ListProperty(str, indexed=False)     # List of users who are allowed to listen to this one 
-    psessions  = db.ListProperty(str, indexed=False)     # List of users whose session this user can listen to
+# MOVED TO dataServer.py
+# class ACLEntry(db.Model):
+#     """
+#     Individual ACL (Access Control List) entry. 
+#     Keeps track for each user who can listen to their sessions (potential listeners) 
+#     and which sessions the user can listen to (potential sessions) 
+#     """
+#     host       = db.UserProperty()                       # User 
+#     sessionkey = db.StringProperty()                     # user's session key - server can recreate channel ID
+#     plisteners = db.ListProperty(str, indexed=False)     # List of users who are allowed to listen to this one 
+#     psessions  = db.ListProperty(str, indexed=False)     # List of users whose session this user can listen to
 
 
 class ACLHandler():
@@ -44,11 +45,17 @@ class ACLHandler():
         For performance, allows duplicates."""
 
         host_entry = findACL(host)
-        host_entry.plisteners.append(plistener)
+        if (host_entry.plisteners != None):
+            host_entry.plisteners.append(str(plistener))
+        else:
+            host_entry.plisteners = [str(plistener)]
         host_entry.put()
 
         plistener_entry = findACL(plistener)
-        plistener_entry.psessions.append(host)
+        if (plistener_entry.psessions != None):
+            plistener_entry.psessions.append(str(host))
+        else:
+            plistener_entry.psessions = [str(host)]
         plistener_entry.put()
 
     def remove(self, host, plistener):
@@ -56,16 +63,17 @@ class ACLHandler():
         and removes host to plistener's psessions ACL.
         Accounts for duplicates. """
 
-        # TODO: don't put if no change?
         host_entry = findACL(host)
-        while (plistener in host_entry.plisteners):
-            host_entry.plisteners.remove(plistener.user_id())
-        host_entry.put()
+        if (host_entry.plisteners != None):
+            while (plistener in host_entry.plisteners):
+                host_entry.plisteners.remove(plistener.user_id())
+            host_entry.put()
 
         plistener_entry = findACL(plistener)
-        while (host in plistener_entry.psessions):
-            plistener_entry.psessions.append(host)
-        plistener_entry.put()
+        if (plistener_entry.psessions != None):
+            while (host in plistener_entry.psessions):
+                plistener_entry.psessions.append(host)
+            plistener_entry.put()
 
 
 class MainPage(webapp.RequestHandler):
@@ -119,7 +127,7 @@ class MainPage(webapp.RequestHandler):
         ACL = findACL(user.user_id())
         # if user has no ACL, create one with no listeners and no potential sessions
         if (ACL == None):
-            ACL = ACLEntry(key_name=user.user_id(),
+            ACL = ACLEntry(key_name=str(user.user_id()),
                            host = user,
                            sessionkey = session_key, 
                            plisteners = [],
@@ -172,10 +180,12 @@ class AddListener(webapp.RequestHandler):
         email = self.request.get('email') #email of potential listner to add
 
         # see if user is online
-        userid = LoggedInUsers.get_by_key_name(email)
-        if (userid != None):
-            # they're online and can be added
-            ACLHandler().add(user.user_id(), userid)
+        if (email != ''):
+            Otherloggedinuser = LoggedInUsers.get_by_key_name(email)
+            userid = Otherloggedinuser.userid
+            if (userid != None):
+                # they're online and can be added
+                ACLHandler().add(user.user_id(), userid)
 
 class RemoveListener(webapp.RequestHandler):
     """
@@ -186,7 +196,8 @@ class RemoveListener(webapp.RequestHandler):
 
         # see if user is online
         if (email != ''): # ignore blank emails
-            userid = db.get(email)
+            Otherloggedinuser = LoggedInUsers.get_by_key_name(email)
+            userid = Otherloggedinuser.userid
             if (userid != None):
                 # they're online and may be in this users list
                 ACLHandler().remove(user.user_id, userid)
