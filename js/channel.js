@@ -1,10 +1,12 @@
 
 /*
- This file contains channel related objects/methods.
+  This file contains channel related objects/methods.
  */
 
 
-// create channel from server token
+/*
+   Create channel from server token
+ */
 function createChannel() {
 	channel = new goog.appengine.Channel(server_token);
     socket = channel.open();
@@ -19,7 +21,7 @@ channelOnOpen = function() {
 }
 
 channelOnMessage = function(message) {
-	console.log('channel message: ' + message);
+	console.log('channelOnMessage');
 	
 	handleServerMessage(message);	
 }
@@ -33,7 +35,7 @@ channelOnClose = function() {
 }
 
 /*
- Updates channel when user is host
+   Updates channel when user is host
  */
 function updateChannel() {
 	$.post('/update',

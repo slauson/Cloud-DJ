@@ -85,7 +85,7 @@ class MainPage(webapp.RequestHandler):
             session = q.get()
             if not session:
                 session_key = session_key_gen()
-                curTime = datetime.now()
+                curTime = datetime.datetime.now()
                 session = Session(key_name = session_key,   # Key for the db.Model. 
                                   host = user,
                                   curSongIdx = 0,
@@ -111,8 +111,7 @@ class MainPage(webapp.RequestHandler):
                 session.put()
                 SessionUpdater(session).send_update(SessionUpdater(session).get_session_message())
 
-            # Close any sessions where this user is the host?
-                    # Perform cleanup where we remove any sessions for which we are the host
+            # Perform cleanup where we remove any sessions for which we are the host
             q = Session.all().filter('host =', user)
             for ses in q.run(read_policy=db.STRONG_CONSISTENCY):
                 SessionUpdater(ses).remove_session()
@@ -198,11 +197,6 @@ class RemoveListener(webapp.RequestHandler):
 #             ACLHandler().remove(user.user_id, userid)
         
 
-class TestPage(webapp.RequestHandler):
-    def get(self):
-        template = jinja_environment.get_template('index.html')
-        self.response.out.write(template.render({}))
-        
 jinja_environment = jinja2.Environment(
     loader=jinja2.FileSystemLoader(os.path.dirname(__file__)))
 app = webapp.WSGIApplication(
@@ -217,8 +211,7 @@ app = webapp.WSGIApplication(
      ('/upload', UploadSong),
      ('/add_listener', AddListener),
      ('/sessions', GetLiveSessions),
-     ('/serve/([^/]+)?', ServeSong),
-     ('/test', TestPage)], debug=True)
+     ('/serve/([^/]+)?', ServeSong)], debug=True)
 
 def session_key_gen():
     chars=string.ascii_letters + string.digits
