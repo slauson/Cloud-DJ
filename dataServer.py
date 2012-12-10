@@ -51,7 +51,7 @@ class SessionUpdater():
     def send_update(self, message):
         #message = self.get_session_message()
         if not message:
-            return
+            return   
         logging.info('send_message to ' + str(self.session.host.user_id() + '_' + self.session.key().id_or_name()) + ': ' + str(message))
         channel.send_message(self.session.host.user_id() + '_' + self.session.key().id_or_name(), message)
         
@@ -221,7 +221,7 @@ class ChannelDisconnect(webapp.RequestHandler):
 class Logout(webapp.RequestHandler):
     def get(self):
         user = users.get_current_user()
-        session = SessionFromRequest(self.request).get_session()   
+        session = SessionFromRequest(self.request).get_session() 
         if (session and user == session.host):
             SessionUpdater(session).remove_session()
         elif (session and user in session.listeners):
@@ -340,4 +340,4 @@ class OpenPage(webapp.RequestHandler):
 class SessionInfo(webapp.RequestHandler):
     def get(self):
         session = SessionFromRequest(self.request).get_session()
-        self.response.out.write(simplejson.dumps(SessionUpdater(session).get_session_message()))
+        self.response.out.write(SessionUpdater(session).get_session_message())
