@@ -198,7 +198,11 @@ function handleServerMessage(message) {
 
 	// session was killed
 	if (message.endFlag) {
-		alert(server_host_email + ' has ended the session. Please join or start a session.');
+		if (message.hostEmail) {
+			alert(message.hostEmail + ' has ended the session. Please join or start a session.');
+		} else {
+			alert('Host has ended the session. Please join or start a session.');
+		}
 		stopSong();
 	}
 
