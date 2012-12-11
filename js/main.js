@@ -142,6 +142,8 @@ function handleServerMessage(message) {
 	// check if we have song
 	if (message.curSongKey) {
 
+		var joinHostedSession = false;
+
 		// check if we are joining a session we hosted
 		if (songs.length == 0 && typeof message.curSongIdx != 'undefined' && message.hostEmail && message.hostEmail == server_me_email) {
 
@@ -152,13 +154,15 @@ function handleServerMessage(message) {
 			$('#pause_button').removeAttr('disabled');
 			$('#play_button').removeAttr('disabled');
 			$('#next_button').removeAttr('disabled');
+
+			joinHostedSession = true;
 		}
 
 		// check if we should play/pause
 		var play = typeof message.play == 'undefined' || message.play;
 
 		// add upcoming current songs only if listener
-		if (hostingIndex == -1) {
+		if (hostingIndex == -1 || joinHostedSession) {
 			// check if we have timestamp
 			if (message.timestamp) {
 
