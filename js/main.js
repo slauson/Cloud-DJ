@@ -70,6 +70,7 @@ function setup() {
 			url: '/soundmanager/swf',
 			flashVersion: 9,
 			useFlashBlock: false,
+			debugMode: false,	// change this for debugging
 			onready: function() {
 				console.log('soundmanager loaded');
 
@@ -88,6 +89,16 @@ function setup() {
 
 /*
    Handles server message from channel or other means
+
+   parameters:
+    - listeners: list of listeners of session
+	- curSongKey: current song key for session
+	- hostEmail: email of host
+	- curSongIdx: current song index (used to reconnect host)
+	- newSongKey: new song added by host (listeners will load in background)
+	- endFlag: end session
+	- timestamp: time when host started playing current song (used to seek)
+	  (this is adjusted to take into account a pause by host on the server side)
  */
 function handleServerMessage(message) {
 	
@@ -107,9 +118,7 @@ function handleServerMessage(message) {
 	// add host to listeners list
 	//host = message.host;
 	
-	// update listener list
 	// TODO: update incrementally?
-
 	// only update if empty or we have listeners
 	if (listeners.length == 0 || message.listeners) {
 		listeners = new Array();
@@ -130,27 +139,26 @@ function handleServerMessage(message) {
 		updateListenerList();
 	}
 	
-	// add upcoming current songs only if listener
-	if (hostingIndex == -1) {
+	// check if we have song
+	if (message.curSongKey) {
 
-		// check if we have song
-		if (message.curSongKey) {
+		// check if we are joining a session we hosted
+		if (songs.length == 0 && typeof message.curSongIdx != 'undefined' && message.hostEmail && message.hostEmail == server_me_email) {
 
-			// check if we are joining a session we hosted
-			if (songs.length == 0 && typeof message.curSongIdx != 'undefined' && message.hostEmail && message.hostEmail == server_me_email) {
+			console.log('join existing hosted session with index ' + message.curSongIdx);
+			hostingIndex = message.curSongIdx
 
-				console.log('join existing hosted session with index ' + message.curSongIdx);
-				hostingIndex = message.curSongIdx
+			// enable buttons
+			$('#pause_button').removeAttr('disabled');
+			$('#play_button').removeAttr('disabled');
+			$('#next_button').removeAttr('disabled');
+		}
 
-				// enable buttons
-				$('#pause_button').removeAttr('disabled');
-				$('#play_button').removeAttr('disabled');
-				$('#next_button').removeAttr('disabled');
-			}
+		// check if we should play/pause
+		var play = typeof message.play == 'undefined' || message.play;
 
-			// check if we should play/pause
-			var play = typeof message.play == 'undefined' || message.play;
-
+		// add upcoming current songs only if listener
+		if (hostingIndex == -1) {
 			// check if we have timestamp
 			if (message.timestamp) {
 
@@ -161,28 +169,31 @@ function handleServerMessage(message) {
 
 				addSong(message.curSongKey, offset, play, true);
 			} else {
-				console.log('2b');
 				addSong(message.curSongKey, 0, play, true);
 			}
 		}
+	}
 
-		// update upcoming songs
-		if (message.playlist) {
-			for (idx in message.playlist) {
-				addSong(message.playlist[idx], 0, false, false);
-			}
+	// update upcoming songs
+	if (message.playlist) {
+		for (idx in message.playlist) {
+			addSong(message.playlist[idx], 0, false, false);
 		}
 	}
 	
 	// add newly uploaded song, play if hosting (for initial upload)
 	if (message.newSongKey) {
-		console.log('newSongKey: ' + message.play);
-		addSong(message.newSongKey, 0, hostingIndex >= 0, false);
+		addSong(message.newSongKey, 0, hostingIndex != -1 && songs.length == 0, false);
+
+		// update listeners if we are host and we are playing this song
+		if (hostingIndex != 0 && songs.length == 1) {
+			updateChannel(1, 0, 0);
+		}
 	}
 
 	// session was killed
 	if (message.endFlag) {
-		alert(server_host + ' has ended the session. Please join or start a session.');
+		alert(server_host_email + ' has ended the session. Please join or start a session.');
 		stopSong();
 	}
 

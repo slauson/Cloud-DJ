@@ -314,6 +314,7 @@ function nextSong() {
 
 			if (hostingIndex != -1) {
 				hostingIndex++;
+				console.log('increment hostingIndex next song: ' + hostingIndex);
 				updateChannel(1, 0, 0);
 			}
 			playSong(0);
@@ -347,7 +348,7 @@ function updateSongList() {
  */
 function addSong(url, offset, play, setCurrent) {
 	console.log('addSong(' + url + ', ' + offset + ', ' + play + ', ' + setCurrent + ')');
-
+	
 	// update current song info
 	var containsSongIndex = -1;
 
@@ -382,7 +383,8 @@ function addSong(url, offset, play, setCurrent) {
 		if (songs.length == 1) {
 			if (play) {
 				playSong(offset);
-			} else {
+			}
+			else {
 				pauseSong();
 
 				// update song properties
@@ -431,6 +433,9 @@ function uploadSong() {
 	// TODO: leave session if currently in someone else's session
 	if (hostingIndex == -1) {
 		hostingIndex = 0;
+	} else if (songs.length == 0) {
+		hostingIndex++;
+		console.log('increment hostingIndex upload song: ' + hostingIndex);
 	}
 
 	// fill in other args before upload
