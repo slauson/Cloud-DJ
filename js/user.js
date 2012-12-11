@@ -129,13 +129,8 @@ function logout() {
 		{'session_key': server_session_key},
 		function(message) {
 			console.log('/logout response:' + message);
+
+			window.location = server_logout_link
 		}
 	);
-	$.post(server_logout_link,
-		{},
-		function(message) {
-			console.log('logout response:' + message);
-		}
-	);
-	window.location = '/'
 }

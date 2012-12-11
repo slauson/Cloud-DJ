@@ -49,6 +49,7 @@ function setup() {
 		$('#pause_button').click(userPauseSong);
 		$('#play_button').click(userPlaySong);
 		$('#next_button').click(userNextSong);
+		//$('#reset_button').click(resetUser);
 
 		// disable buttons until user hosts session
 		$('#pause_button').attr('disabled', 'disabled');
@@ -197,7 +198,11 @@ function handleServerMessage(message) {
 
 	// session was killed
 	if (message.endFlag) {
-		alert(server_host_email + ' has ended the session. Please join or start a session.');
+		if (message.hostEmail) {
+			alert(message.hostEmail + ' has ended the session. Please join or start a session.');
+		} else {
+			alert('Host has ended the session. Please join or start a session.');
+		}
 		stopSong();
 	}
 

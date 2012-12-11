@@ -284,7 +284,7 @@ class UpdateChannel(webapp.RequestHandler):
                 song = Song.get(session.playlist[curIdx])
                 message = { "updateSesStr": str(session.host.email()) + "," + str(session.key().name()) + "," + str(song.filename) 
                 }
-                # TODO: uncomment this once ACLs are working
+				# this needs to be sent to all potential listeners
                 #SessionListUpdater().send_update(simplejson.dumps(message))   # Send only the change
 
 # Remove self from listeners
