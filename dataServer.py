@@ -168,6 +168,7 @@ class SessionUpdater():
         self.session.put()
         
     def remove_session(self):
+        logging.info('remove_session: ' + str(self.session))
         # Mark for deletion
         self.session.endFlag = True
         self.session.play = False
@@ -218,7 +219,6 @@ class ChannelDisconnect(webapp.RequestHandler):
     def post(self):
         channel_id = self.request.get('from')
         channel_id = channel_id.split("_", 1)
-        logging.info('channel_id: ' + channel_id[0] + ":" + channel_id[1])
         if (len(channel_id) > 1):
             if (channel_id[0] != ""):
                 userID = channel_id[0]
@@ -236,6 +236,7 @@ class ChannelDisconnect(webapp.RequestHandler):
                 if userID == lst.user_id():
                     user = lst
                     SessionUpdater(session).remove_listener(user)
+        logging.info('ChannelDisconnect: ' + str(channel_id[0]) + ', ' + str(channel_id[1]) + ', ' + str(session) + ', ' + str(user))
                 
         if user:
             q = Session.all().filter('host =', user)
@@ -248,6 +249,7 @@ class Logout(webapp.RequestHandler):
         user = users.get_current_user()
         # Remove self from current session
         session = SessionFromRequest(self.request).get_session() 
+        logging.info('Logout: ' + str(user) + ', ' + str(session))
         if (session and user == session.host):
             SessionUpdater(session).remove_session()
         elif (session and user in session.listeners):
@@ -284,7 +286,7 @@ class UpdateChannel(webapp.RequestHandler):
                 song = Song.get(session.playlist[curIdx])
                 message = { "updateSesStr": str(session.host.email()) + "," + str(session.key().name()) + "," + str(song.filename) 
                 }
-				# this needs to be sent to all potential listeners
+                # this needs to be sent to all potential listeners
                 #SessionListUpdater().send_update(simplejson.dumps(message))   # Send only the change
 
 # Remove self from listeners
@@ -301,8 +303,10 @@ class RemoveListener(webapp.RequestHandler):
 class GetLiveSessions(webapp.RequestHandler):
     def get(self):
         session = SessionFromRequest(self.request).get_session()
+        logging.info('UploadSong: ' + str(session))
 #           user = users.get_current_user()
         if session:
+            logging.info('session: ' + str(session.key().id_or_name()))
             # TODO: filter wasn't returning any results
             sessionList = Session.all().filter('endFlag =', False).run()
             msg = ""
@@ -330,9 +334,11 @@ class UploadSong(blobstore_handlers.BlobstoreUploadHandler):
     def post(self):
         session = SessionFromRequest(self.request).get_session()
         filename = self.request.get('filename')
+        logging.info('UploadSong: ' + str(filename) + ', ' + str(session) + ', ' + str(session.host))
 #        title = self.request.get('title')
 #        artist = self.request.get('artist')
         if (session and session.host == users.get_current_user()):
+            logging.info('session: ' + str(session.key().id_or_name()))
             upload_files = self.get_uploads('file')
 
             # automatically play first song so we don't have to send separate update
@@ -372,4 +378,5 @@ class OpenPage(webapp.RequestHandler):
 class SessionInfo(webapp.RequestHandler):
     def get(self):
         session = SessionFromRequest(self.request).get_session()
+        logging.info('SessionInfo: ' + str(session.key().id_or_name()))
         self.response.out.write(SessionUpdater(session).get_session_message())
