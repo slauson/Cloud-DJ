@@ -22,10 +22,24 @@ function Song(id, url, position) {
 		autoPlay: false,
 		onload:function() {
 			console.log(this.id + ' done loading');
-			//$('#song_loading').hide();
 			
+			// update loading bar/percentage only if song is currently playing
+			if (this.playState == 1 || this.paused) {
+				$('#song_loading').html('100% Loaded');
+			}
+
 			// load next song
 			loadSong();
+		},
+		onplay:function() {
+			console.log(this.id + ' playing');
+
+			// set loading message
+			if (this.loaded) {
+				$('#song_loading').html('100% Loaded');
+			} else {
+				$('#song_loading').html('Loading...');
+			}
 		},
 		onfinish:function() {
 			console.log(this.id + ' done playing');
@@ -39,13 +53,13 @@ function Song(id, url, position) {
 			console.log(this.id + ' loading (' + this.bytesLoaded + ' / ' + this.bytesTotal + ')');
 
 			// update loading bar/percentage only if song is currently playing
-			if (this.playState == 1 || this.paused) {
+			/*if (this.playState == 1 || this.paused) {
 				var str = Math.floor((this.bytesLoaded/this.bytesTotal)*100) + '% Loaded';
 
 				if (str != $('#song_loading').html) {
 					$('#song_loading').html(str);
 				}
-			}
+			}*/
 		},
 		whileplaying:function() {
 			// update time of song
