@@ -132,9 +132,9 @@ class MainPage(webapp.RequestHandler):
 
 
         # Deployed version:
-        session_link = 'http://2.' + app_identity.get_default_version_hostname() + '/?session_key=' + session_key
+        session_link = 'http://' + app_identity.get_default_version_hostname() + '/?session_key=' + session_key
         #session_link = 'http://localhost:8080/?session_key=' + session_key
-        logout_link = users.create_logout_url('/')
+        logout_link = users.create_logout_url(self.request.uri)
 
         if session:
             token = channel.create_channel(user.user_id() + "_" + session_key)
@@ -198,7 +198,7 @@ app = webapp.WSGIApplication(
     [('/', MainPage),
      ('/open', OpenPage),
      ('/logout', Logout),
-     ('/_ah/channel/disconnected', ChannelDisconnect),
+     ('/_ah/channel/disconnected/', ChannelDisconnect),
      ('/update', UpdateChannel),
      ('/info', SessionInfo),
      ('/remove', RemoveListener),
