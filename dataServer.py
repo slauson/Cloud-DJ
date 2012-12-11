@@ -205,17 +205,26 @@ class SessionListUpdater():
 class ChannelDisconnect(webapp.RequestHandler):
     def post(self):
         channel_id = self.request.get('from')
-        channel_id = channel_id.split("_", maxsplit=1)
+        channel_id = channel_id.split("_", 1)
+        logging.info('channel_id: ' + channel_id[0] + ":" + channel_id[1])
         if (len(channel_id) > 1):
-            user = users.User(_user_id = channel_id[0]) # extract user
-        logging.info('channel_id: ' + channel_id)
+            if (channel_id[0] != ""):
+                userID = channel_id[0]
         session_key = channel_id[-1] # extract session key
         session = Session.get_by_key_name(session_key)
-        if (session and user in session.listeners):
-            SessionUpdater(session).remove_listener(user)
-        elif (session and user == session.host):
+        
+        user = None
+        
+        if (session and userID == session.host.user_id()):
+            user = session.host
             SessionUpdater(session).remove_session()
-            
+        elif (session):
+            # Get user_ids of all listeners
+            for lst in session.listeners:
+                if userID == lst.user_id():
+                    user = lst
+                    SessionUpdater(session).remove_listener(user)
+                
         if user:
             q = Session.all().filter('host =', user)
             for ses in q.run(read_policy=db.STRONG_CONSISTENCY):
