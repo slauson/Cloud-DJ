@@ -306,7 +306,7 @@ function nextSong() {
 				alert('Please choose another song to continue your session.');
 				// TODO: send some kind of update to server?
 			} else {
-				alert('Session host has not chosen the next song.');
+				$('#song_playback').html($('#song_playback').html() + ' (Waiting on host...)');
 			}
 		}
 		// otherwise play next song
