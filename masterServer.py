@@ -125,9 +125,9 @@ class MainPage(webapp.RequestHandler):
 
         # TODO: remove when user logs out
         # ADD USER TO LIST OF LOGGED IN USERS
-        # (so other users can add to listner list
+        # (so other users can add to listner list)
         addlog = LoggedInUsers(key_name = user.email(),
-                              userid = user.user_id())
+                               userid = user.user_id())
         addlog.put()
 
 
@@ -171,10 +171,26 @@ class AddListener(webapp.RequestHandler):
         # see if user is online
         if (email != ''): #ignore blank emails
             Otherloggedinuser = LoggedInUsers.get_by_key_name(email)
-            userid = Otherloggedinuser.userid
-            if (userid != None):
+            listener_userid = Otherloggedinuser.userid
+            if (listener_userid != None):
                 # they're online and can be added
-                ACLHandler().add(user.user_id(), userid)
+                ACLHandler().add(user.user_id(), listener_userid)
+
+                # UPDATE NEW LISTENER'S CHANNEL
+                
+                # first check if user is actually a host, not a listener
+                hostACL = findACL(user.user_id())
+                session = Session.get_by_key_name(hostACL.sessionkey)
+                if (session.host.user_id() == user.user_id()):
+                    # actually a host
+                    # send info on new listener's channel
+                    # TODO: does this channel even exist?
+                    #message = SessionUpdater(session).get_session_message()
+                    #logging.info('send_message to ' + str(listener_userid + '_' + hostACL.sessionkey + ': ' + str(message)))
+                    #channel.send_message(listener_userid + '_' + self.session.key().id_or_name(), message)
+                    # TODO: send incremental update instead of entire thing list of everything
+
+
 
 class RemoveListener(webapp.RequestHandler):
     """
