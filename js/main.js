@@ -70,6 +70,7 @@ function setup() {
 			url: '/soundmanager/swf',
 			flashVersion: 9,
 			useFlashBlock: false,
+			debugMode: false,	// change this for debugging
 			onready: function() {
 				console.log('soundmanager loaded');
 
@@ -88,6 +89,16 @@ function setup() {
 
 /*
    Handles server message from channel or other means
+
+   parameters:
+    - listeners: list of listeners of session
+	- curSongKey: current song key for session
+	- hostEmail: email of host
+	- curSongIdx: current song index (used to reconnect host)
+	- newSongKey: new song added by host (listeners will load in background)
+	- endFlag: end session
+	- timestamp: time when host started playing current song (used to seek)
+	  (this is adjusted to take into account a pause by host on the server side)
  */
 function handleServerMessage(message) {
 	
@@ -100,22 +111,20 @@ function handleServerMessage(message) {
 
 	// fix weird json encoding issues (http://stackoverflow.com/questions/9036429/convert-object-string-to-json)
 	//message = $.parseJSON(JSON.stringify(eval('(' + message.data + ')')));
-	while (typeof message == "string") {
+	while (typeof message == 'string') {
 		message = JSON.parse(message);
 	}
 
 	// add host to listeners list
 	//host = message.host;
 	
-	// update listener list
 	// TODO: update incrementally?
-
 	// only update if empty or we have listeners
 	if (listeners.length == 0 || message.listeners) {
 		listeners = new Array();
 
 		// only add host if its not us
-		if (hostingIndex == -1 && message.hostEmail != server_me_email) {
+		if (hostingIndex == -1 && message.hostEmail && message.hostEmail != server_me_email) {
 			listeners.push(new Listener(message.hostEmail + ' (host)'));
 		}
 		if (message.listeners) {
@@ -130,51 +139,68 @@ function handleServerMessage(message) {
 		updateListenerList();
 	}
 	
-	// add upcoming current songs only if listener
-	if (hostingIndex == -1) {
+	// check if we have song
+	if (message.curSongKey) {
 
-		// check if we have song
-		if (message.curSongKey) {
+		var joinHostedSession = false;
 
-			// check if we should play/pause
-			var play = typeof message.play == "undefined" || message.play;
+		// check if we are joining a session we hosted
+		if (songs.length == 0 && typeof message.curSongIdx != 'undefined' && message.hostEmail && message.hostEmail == server_me_email) {
 
+			console.log('join existing hosted session with index ' + message.curSongIdx);
+			hostingIndex = message.curSongIdx
+
+			// enable buttons
+			$('#pause_button').removeAttr('disabled');
+			$('#play_button').removeAttr('disabled');
+			$('#next_button').removeAttr('disabled');
+
+			joinHostedSession = true;
+		}
+
+		// check if we should play/pause
+		var play = typeof message.play == 'undefined' || message.play;
+
+		// add upcoming current songs only if listener
+		if (hostingIndex == -1 || joinHostedSession) {
 			// check if we have timestamp
 			if (message.timestamp) {
 
 				// calculate offset to start playing song
 				var now = Math.round((new Date()).getTime() / 1000);
-
 				var offset = now - message.timestamp;
-
 				console.log('offsets: ' + message.timestamp + ', ' + now + ', ' + offset);
 
 				addSong(message.curSongKey, offset, play, true);
 			} else {
-				console.log('2b');
 				addSong(message.curSongKey, 0, play, true);
 			}
 		}
+	}
 
-		// update upcoming songs
-		if (message.playlist) {
-			for (idx in message.playlist) {
-				addSong(message.playlist[idx], 0, false, false);
-			}
+	// update upcoming songs
+	if (message.playlist) {
+		for (idx in message.playlist) {
+			addSong(message.playlist[idx], 0, false, false);
 		}
 	}
 	
 	// add newly uploaded song, play if hosting (for initial upload)
 	if (message.newSongKey) {
-		var play = typeof message.play == "undefined" || message.play;
-		addSong(message.newSongKey, 0, play, false);
+		addSong(message.newSongKey, 0, hostingIndex != -1 && songs.length == 0, false);
+
+		// update listeners if we are host and we are playing this song
+		if (hostingIndex != 0 && songs.length == 1) {
+			updateChannel(1, 0, 0);
+		}
 	}
 
 	// session was killed
 	if (message.endFlag) {
-		alert(server_host + " has ended the session. Please join or start a session.");
+		alert(server_host_email + ' has ended the session. Please join or start a session.');
 		stopSong();
 	}
+
 }
 
 /*
@@ -242,7 +268,7 @@ function userPlaySong() {
 function userNextSong() {
 	// check if we have another song
 	if (songs.length <= 1) {
-		alert('Add a song before skipping it');
+		alert('Please add another song before skipping.');
 	} else {
 		nextSong();
 	}
@@ -272,7 +298,7 @@ function getUploadUrl() {
 		function(message) {
 			console.log('/generate_upload_url response:' + message);
 
-			$("#upload_song_form").attr("action", message);
+			$('#upload_song_form').attr('action', message);
 		}
 	);
 }

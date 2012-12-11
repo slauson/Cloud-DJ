@@ -19,7 +19,18 @@ def ACL_key(user_id):
     return db.Key.from_path('ACL', user_id)
 
 def findACL(userid):
-    return db.get(ACL_key(userid))
+    return ACLEntry.get_by_key_name(str(userid))
+
+class ACLEntry(db.Model):
+    """                                                                                                                                                     
+    Individual ACL (Access Control List) entry.                                                                                                             
+    Keeps track for each user who can listen to their sessions (potential listeners)                                                                        
+    and which sessions the user can listen to (potential sessions)                                                                                          
+    """
+    host       = db.UserProperty()                       # User                                                                                             
+    sessionkey = db.StringProperty()                     # user's session key - server can recreate channel ID                                              
+    plisteners = db.ListProperty(str, indexed=False)     # List of users who are allowed to listen to this one                                              
+    psessions  = db.ListProperty(str, indexed=False)     # List of users whose session this user can listen to                                              
 
     
 ###############################################################
@@ -80,6 +91,7 @@ class SessionUpdater():
             song = Song.get(playlist[idx])
 #            sessionUpdate['title']= song.title                  # Current song title
 #            sessionUpdate['artist']= song.artist                 # Current song artist
+            sessionUpdate['curSongIdx']= idx                      # Current song index. (Used for reinitializing host on connection loss)
             sessionUpdate['curSongKey']= str(song.blob_key.key())        # Current song blob key. Serve url: /serve/blob_key
             upcomingSongs = []         # send upcoming playlist so new listeners can load songs
 
@@ -322,6 +334,8 @@ class UploadSong(blobstore_handlers.BlobstoreUploadHandler):
 #        artist = self.request.get('artist')
         if (session and session.host == users.get_current_user()):
             upload_files = self.get_uploads('file')
+
+            # automatically play first song so we don't have to send separate update
             if (session.curSongIdx == 0):
                 session.timestamp = datetime.datetime.now()
                 session.play = True

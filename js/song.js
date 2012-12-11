@@ -120,7 +120,7 @@ function Song(id, url, position) {
 	// only actually sets position if we have loaded data up to that point
 	this.setPosition = function(offset) {
 		console.log('setPosition(' + offset + ')');
-		if (offset != 0 && (typeof this.sound.loaded == "undefined" ||
+		if (offset != 0 && (typeof this.sound.loaded == 'undefined' ||
 				!this.sound.loaded || (this.sound.duration && offset * 1000 < this.sound.duration)))
 		{
 			this.sound.setPosition(offset * 1000);
@@ -303,10 +303,10 @@ function nextSong() {
 		// check if song list is empty
 		if (songs.length == 0) {
 			if (hostingIndex != -1) {
-				alert("Please choose another song to continue your session.");
+				alert('Please choose another song to continue your session.');
 				// TODO: send some kind of update to server?
 			} else {
-				alert("Session host has not chosen the next song.");
+				$('#song_playback').html($('#song_playback').html() + ' (Waiting on host...)');
 			}
 		}
 		// otherwise play next song
@@ -314,6 +314,7 @@ function nextSong() {
 
 			if (hostingIndex != -1) {
 				hostingIndex++;
+				console.log('increment hostingIndex next song: ' + hostingIndex);
 				updateChannel(1, 0, 0);
 			}
 			playSong(0);
@@ -347,7 +348,7 @@ function updateSongList() {
  */
 function addSong(url, offset, play, setCurrent) {
 	console.log('addSong(' + url + ', ' + offset + ', ' + play + ', ' + setCurrent + ')');
-
+	
 	// update current song info
 	var containsSongIndex = -1;
 
@@ -382,7 +383,8 @@ function addSong(url, offset, play, setCurrent) {
 		if (songs.length == 1) {
 			if (play) {
 				playSong(offset);
-			} else {
+			}
+			else {
 				pauseSong();
 
 				// update song properties
@@ -431,6 +433,9 @@ function uploadSong() {
 	// TODO: leave session if currently in someone else's session
 	if (hostingIndex == -1) {
 		hostingIndex = 0;
+	} else if (songs.length == 0) {
+		hostingIndex++;
+		console.log('increment hostingIndex upload song: ' + hostingIndex);
 	}
 
 	// fill in other args before upload
