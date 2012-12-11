@@ -19,7 +19,18 @@ def ACL_key(user_id):
     return db.Key.from_path('ACL', user_id)
 
 def findACL(userid):
-    return db.get(ACL_key(userid))
+    return ACLEntry.get_by_key_name(str(userid))
+
+class ACLEntry(db.Model):
+    """                                                                                                                                                     
+    Individual ACL (Access Control List) entry.                                                                                                             
+    Keeps track for each user who can listen to their sessions (potential listeners)                                                                        
+    and which sessions the user can listen to (potential sessions)                                                                                          
+    """
+    host       = db.UserProperty()                       # User                                                                                             
+    sessionkey = db.StringProperty()                     # user's session key - server can recreate channel ID                                              
+    plisteners = db.ListProperty(str, indexed=False)     # List of users who are allowed to listen to this one                                              
+    psessions  = db.ListProperty(str, indexed=False)     # List of users whose session this user can listen to                                              
 
     
 ###############################################################
