@@ -49,6 +49,7 @@ function setup() {
 		$('#pause_button').click(userPauseSong);
 		$('#play_button').click(userPlaySong);
 		$('#next_button').click(userNextSong);
+		//$('#reset_button').click(resetUser);
 
 		// disable buttons until user hosts session
 		$('#pause_button').attr('disabled', 'disabled');
