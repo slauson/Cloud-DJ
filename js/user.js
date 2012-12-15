@@ -36,6 +36,32 @@ function Session(sessionId, username, title) {
  */
 
 /*
+ Updates listeners from server message
+ */
+function updateListeners(host_email, listeners_update) {
+
+	console.log('updateListeners(' + host_email + ', ' + listeners_update + ')');
+
+	if (!listeners_update) {
+		return;
+	}
+
+	listeners = new Array();
+
+	// only add host if its not us
+	if (hostingIndex == -1 && host_email && host_email != server_me_email) {
+		listeners.push(new Listener(host_email + ' (host)'));
+	}
+
+	for (idx in listeners_update) {
+		// only add listener entry if its not us
+		if (listeners_update[idx] != server_me_email) {
+			listeners.push(new Listener(listeners_update[idx]));
+		}
+	}
+}
+
+/*
  Updates listener list from listener array
  */
 function updateListenerList() {
@@ -45,6 +71,13 @@ function updateListenerList() {
 	for (idx in listeners) {
 		$('#listeners').append(listeners[idx].getList());
 	}
+}
+
+/*
+ Updates sessions from server message
+ */
+function updateSessions(sessions_update) {
+	// TODO
 }
 
 /*

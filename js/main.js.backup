@@ -91,14 +91,6 @@ function setup() {
 /*
    Handles server message from channel or other means
 
-   types:
-    - update_song
-	- remove_listener
-	- update_listener
-	- remove_session
-	- upload_song
-	- open_page
-
    parameters:
     - listeners: list of listeners of session
 	- curSongKey: current song key for session
@@ -130,53 +122,105 @@ function handleServerMessage(message) {
 		return;
 	}
 
-	// song update
-	if (message.type == 'song_update') {
-		songUpdate(message.curSongKey, message.play, message.endFlag, message.timestamp, message.hostEmail, false);
+	if (message.type == "update_song") {
+
 	}
-	// session update
-	else if (message.type == 'session_update') {
-		updateListeners(message.hostEmail, message.listeners);
+	else if (message.type == "remove_listener" || message.type == "add_listener") {
+
+	}
+	else if (message.type == "remove_session") {
+
+	}
+	else if (message.type == "upload_song") {
+
+	}
+	else if (message.type == "open_page") {
+
+	}
+
+	// add host to listeners list
+	//host = message.host;
+	
+	// TODO: update incrementally?
+	// only update if empty or we have listeners
+	if (listeners.length == 0 || message.listeners) {
+		listeners = new Array();
+
+		// only add host if its not us
+		if (hostingIndex == -1 && message.hostEmail && message.hostEmail != server_me_email) {
+			listeners.push(new Listener(message.hostEmail + ' (host)'));
+		}
+		if (message.listeners) {
+			for (idx in message.listeners) {
+
+				// only add listener entry if its not us
+				if (message.listeners[idx] != server_me_email) {
+					listeners.push(new Listener(message.listeners[idx]));
+				}
+			}
+		}
 		updateListenerList();
+	}
+	
+	// check if we have song
+	if (message.curSongKey) {
 
-		//updateSessions
+		var joinHostedSession = false;
 
-		// check if we need to add a song
-		if (songs.length == 0) {
+		// check if we are joining a session we hosted
+		if (songs.length == 0 && typeof message.curSongIdx != 'undefined' && message.hostEmail && message.hostEmail == server_me_email) {
 
-			// hosting
-			if (typeof message.curSongIdx != 'undefined' && message.hostEmail && message.hostEmail == server_me_email) {
-				console.log('join existing hosted session with index ' + message.curSongIdx);
-				hostingIndex = message.curSongIdx
+			console.log('join existing hosted session with index ' + message.curSongIdx);
+			hostingIndex = message.curSongIdx
 
-				// enable buttons
-				$('#pause_button').removeAttr('disabled');
-				$('#play_button').removeAttr('disabled');
-				$('#next_button').removeAttr('disabled');
+			// enable buttons
+			$('#pause_button').removeAttr('disabled');
+			$('#play_button').removeAttr('disabled');
+			$('#next_button').removeAttr('disabled');
 
-				songUpdate(message.curSongKey, message.play, message.endFlag, message.timestamp, message.hostEmail, true);
-			}
-			// listening
-			else {
-				songUpdate(message.curSongKey, message.play, message.endFlag, message.timestamp, message.hostEmail, false);
+			joinHostedSession = true;
+		}
+
+		// check if we should play/pause
+		var play = typeof message.play == 'undefined' || message.play;
+
+		// add upcoming current songs only if listener
+		if (hostingIndex == -1 || joinHostedSession) {
+			// check if we have timestamp
+			if (message.timestamp) {
+
+				// calculate offset to start playing song
+				var now = Math.round((new Date()).getTime() / 1000);
+				var offset = now - message.timestamp;
+				console.log('offsets: ' + message.timestamp + ', ' + now + ', ' + offset);
+
+				addSong(message.curSongKey, offset, play, true);
+			} else {
+				addSong(message.curSongKey, 0, play, true);
 			}
 		}
 	}
-	// new song added
-	else if (message.type == 'song_upload') {
-		// add newly uploaded song, play if hosting (for initial upload)
-		if (message.newSongKey) {
-			addSong(message.newSongKey, 0, hostingIndex != -1 && songs.length == 0, false);
+	
+	// add newly uploaded song, play if hosting (for initial upload)
+	if (message.newSongKey) {
+		addSong(message.newSongKey, 0, hostingIndex != -1 && songs.length == 0, false);
 
-			// update listeners if we are host and we are playing this song
-			if (hostingIndex != 0 && songs.length == 1) {
-				updateChannel(1, 0, 0);
-			}
+		// update listeners if we are host and we are playing this song
+		if (hostingIndex != 0 && songs.length == 1) {
+			updateChannel(1, 0, 0);
 		}
 	}
-	else if (message.type == 'open_page') {
-		// TODO
+
+	// session was killed
+	if (message.endFlag) {
+		if (message.hostEmail) {
+			alert(message.hostEmail + ' has ended the session. Please join or start a session.');
+		} else {
+			alert('Host has ended the session. Please join or start a session.');
+		}
+		stopSong();
 	}
+
 }
 
 /*
