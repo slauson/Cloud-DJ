@@ -340,6 +340,7 @@ function nextSong() {
    Updates song from server message
  */
 function songUpdate(song_key, play, end, timestamp, host_email, join_hosted_session) {
+
 	// check if we have song
 	if (song_key) {
 

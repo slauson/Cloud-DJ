@@ -67,8 +67,14 @@ class SessionUpdater():
         channel.send_message(self.session.host.user_id() + '_' + self.session.key().id_or_name(), message)
         
         for lst in self.session.listeners:
-            logging.info('send_message to ' + str(lst.user_id() + '_' + self.session.key().id_or_name()) + ': ' + str(message))
-            channel.send_message(lst.user_id() + '_' + self.session.key().id_or_name(), message)
+            user_id = lst.user_id()
+
+            # handle test users
+            if not user_id:
+                user_id = lst.email()
+
+            logging.info('send_message to ' + str(user_id + '_' + self.session.key().id_or_name()) + ': ' + str(message))
+            channel.send_message(user_id + '_' + self.session.key().id_or_name(), message)
 
     # Update message for non-incremental updates
     # Returns entire model  
@@ -76,12 +82,8 @@ class SessionUpdater():
         playlist = self.session.playlist
         idx = self.session.curSongIdx
 
-        time_curr = datetime.datetime.now();
-        time_diff = time_curr - self.session.timestamp
-
-        logging.info('timestamp: ' + str(self.session.timestamp))
-        logging.info('time_curr: ' + str(time_curr))
-        logging.info('time_diff: ' + str(time_diff))
+        # calculate playback offset
+        time_diff = datetime.datetime.now() - self.session.timestamp
 
         sessionUpdate = {
             'type': 'session_update',
@@ -121,12 +123,8 @@ class SessionUpdater():
         if not playlist or idx < 0:
             return
         
-        time_curr = datetime.datetime.now();
-        time_diff = time_curr - self.session.timestamp
-
-        logging.info('timestamp: ' + str(self.session.timestamp))
-        logging.info('time_curr: ' + str(time_curr))
-        logging.info('time_diff: ' + str(time_diff))
+        # calculate playback offset
+        time_diff = datetime.datetime.now() - self.session.timestamp
 
         song = Song.get(playlist[idx])
         sessionUpdate = {
@@ -324,7 +322,7 @@ class RemoveListener(webapp.RequestHandler):
 class GetLiveSessions(webapp.RequestHandler):
     def get(self):
         session = SessionFromRequest(self.request).get_session()
-        logging.info('UploadSong: ' + str(session))
+        logging.info('GetLiveSessions: ' + str(session))
 #           user = users.get_current_user()
         if session:
             logging.info('session: ' + str(session.key().id_or_name()))
@@ -399,5 +397,10 @@ class OpenPage(webapp.RequestHandler):
 class SessionInfo(webapp.RequestHandler):
     def get(self):
         session = SessionFromRequest(self.request).get_session()
-        logging.info('SessionInfo: ' + str(session.key().id_or_name()))
-        self.response.out.write(SessionUpdater(session).get_session_message())
+        logging.info('SessionInfo: ' + str(session))
+        
+        # when setting up test clients, for some reason their sessions are None
+        if not session:
+            logging.error('Missing session for request ' + str(self.request))
+        else:
+            self.response.out.write(SessionUpdater(session).get_session_message())

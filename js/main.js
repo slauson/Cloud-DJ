@@ -55,6 +55,11 @@ function setup() {
 		$('#pause_button').attr('disabled', 'disabled');
 		$('#play_button').attr('disabled', 'disabled');
 		$('#next_button').attr('disabled', 'disabled');
+
+		// disable upload form if listener
+		if (location.href.match('.*session_key.*')) {
+			$('#upload_song_form_file').attr('disabled', 'disabled');
+		}
 		
 		// setup channel
 		createChannel();
@@ -116,11 +121,9 @@ function handleServerMessage(message) {
 
 	message = message.data;
 
-	savedMessage = message;
-
 	// fix weird json encoding issues (http://stackoverflow.com/questions/9036429/convert-object-string-to-json)
 	//message = $.parseJSON(JSON.stringify(eval('(' + message.data + ')')));
-	while (typeof message == 'string') {
+	while (typeof message == 'string' && message.length > 0) {
 		message = JSON.parse(message);
 	}
 
