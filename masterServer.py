@@ -182,6 +182,7 @@ class AddListener(webapp.RequestHandler):
                 hostACL = findACL(user.user_id())
                 session = Session.get_by_key_name(hostACL.sessionkey)
                 if (session.host.user_id() == user.user_id()):
+                    pass
                     # actually a host
                     # send info on new listener's channel
                     # TODO: does this channel even exist?
