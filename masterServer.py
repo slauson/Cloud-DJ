@@ -71,15 +71,25 @@ class MainPage(webapp.RequestHandler):
         session_key = str(self.request.get('session_key'))
         session = None
 
+        # testing flag
+        testing = 'testing' in self.request.arguments()
+        logging.info('testing: ' + str(testing))
+
         if not user:
-            self.redirect(users.create_login_url(self.request.uri))
-            return
+
+            # generate random user when testing
+            if testing:
+                user = users.User(str(time.mktime(datetime.datetime.now().timetuple())) + '@test.com')
+            else:
+                self.redirect(users.create_login_url(self.request.uri))
+                return
 
         if not session_key:
             # No session specified, create a new one, make this the host 
             # If this user is already hosting, connect them to the existing session
             q = Session.all().filter("host =", user)
             session = q.get()
+            logging.info('session: ' + str(session))
             if not session:
                 session_key = session_key_gen()
                 curTime = datetime.datetime.now()
@@ -113,10 +123,16 @@ class MainPage(webapp.RequestHandler):
             for ses in q.run(read_policy=db.STRONG_CONSISTENCY):
                 SessionUpdater(ses).remove_session()
 
-        ACL = findACL(user.user_id())
+
+        # handle test users
+        user_id = user.user_id()
+        if not user_id:
+            user_id = user.email()
+
+        ACL = findACL(user_id)
         # if user has no ACL, create one with no listeners and no potential sessions
         if (ACL == None):
-            ACL = ACLEntry(key_name=str(user.user_id()),
+            ACL = ACLEntry(key_name=str(user_id),
                            host = user,
                            sessionkey = session_key, 
                            plisteners = [],
@@ -127,7 +143,7 @@ class MainPage(webapp.RequestHandler):
         # ADD USER TO LIST OF LOGGED IN USERS
         # (so other users can add to listner list)
         addlog = LoggedInUsers(key_name = user.email(),
-                               userid = user.user_id())
+                               userid = user_id)
         addlog.put()
 
 
@@ -137,9 +153,10 @@ class MainPage(webapp.RequestHandler):
         logout_link = users.create_logout_url(self.request.uri)
 
         if session:
-            token = channel.create_channel(user.user_id() + "_" + session_key)
+
+            token = channel.create_channel(user_id + "_" + session_key)
             template_values = {'token': token,
-                               'me': user.user_id(),
+                               'me': user_id,
                                'me_email': user.email(),
                                'session_key': session_key,
                                'session_link': session_link,

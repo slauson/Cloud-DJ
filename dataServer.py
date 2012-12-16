@@ -61,13 +61,20 @@ class SessionUpdater():
     # Update channel clients with the specified message
     def send_update(self, message):
         if not message:
-            return   
+            return
+
         logging.info('send_message to ' + str(self.session.host.user_id() + '_' + self.session.key().id_or_name()) + ': ' + str(message))
         channel.send_message(self.session.host.user_id() + '_' + self.session.key().id_or_name(), message)
         
         for lst in self.session.listeners:
-            logging.info('send_message to ' + str(lst.user_id() + '_' + self.session.key().id_or_name()) + ': ' + str(message))
-            channel.send_message(lst.user_id() + '_' + self.session.key().id_or_name(), message)
+            user_id = lst.user_id()
+
+            # handle test users
+            if not user_id:
+                user_id = lst.email()
+
+            logging.info('send_message to ' + str(user_id + '_' + self.session.key().id_or_name()) + ': ' + str(message))
+            channel.send_message(user_id + '_' + self.session.key().id_or_name(), message)
 
     # Update message for non-incremental updates
     # Returns entire model  
@@ -75,12 +82,16 @@ class SessionUpdater():
         playlist = self.session.playlist
         idx = self.session.curSongIdx
 
+        # calculate playback offset
+        time_diff = datetime.datetime.now() - self.session.timestamp
+
         sessionUpdate = {
+            'type': 'session_update',
             'host': self.session.host.user_id(),
             'hostEmail': self.session.host.email(),
             'play': self.session.play,              # Tell the client to play or not
             'endFlag': self.session.endFlag,         # Session end or not
-            'timestamp': time.mktime(self.session.timestamp.timetuple())
+            'timestamp': str(time_diff.seconds)
         }
         listeners_list = []
         for listener in self.session.listeners:
@@ -89,16 +100,18 @@ class SessionUpdater():
 
         if playlist:
             song = Song.get(playlist[idx])
-#            sessionUpdate['title']= song.title                  # Current song title
-#            sessionUpdate['artist']= song.artist                 # Current song artist
-            sessionUpdate['curSongIdx']= idx                      # Current song index. (Used for reinitializing host on connection loss)
-            sessionUpdate['curSongKey']= str(song.blob_key.key())        # Current song blob key. Serve url: /serve/blob_key
-            upcomingSongs = []         # send upcoming playlist so new listeners can load songs
 
-            for i in range(idx+1, len(playlist)):
-                s = Song.get(playlist[i])
-                upcomingSongs.append(str(s.blob_key.key()))
-            sessionUpdate['playlist']= upcomingSongs
+            if song:
+    #            sessionUpdate['title']= song.title                  # Current song title
+    #            sessionUpdate['artist']= song.artist                 # Current song artist
+                sessionUpdate['curSongIdx']= idx                      # Current song index. (Used for reinitializing host on connection loss)
+                sessionUpdate['curSongKey']= str(song.blob_key.key())        # Current song blob key. Serve url: /serve/blob_key
+                upcomingSongs = []         # send upcoming playlist so new listeners can load songs
+
+                for i in range(idx+1, len(playlist)):
+                    s = Song.get(playlist[i])
+                    upcomingSongs.append(str(s.blob_key.key()))
+                sessionUpdate['playlist']= upcomingSongs
         logging.info('get_session_message: ' + str(sessionUpdate))
         return simplejson.dumps(sessionUpdate)
     
@@ -110,14 +123,18 @@ class SessionUpdater():
         if not playlist or idx < 0:
             return
         
+        # calculate playback offset
+        time_diff = datetime.datetime.now() - self.session.timestamp
+
         song = Song.get(playlist[idx])
         sessionUpdate = {
 #            'title': song.title,
 #            'artist': song.artist,
+            'type': 'song_update',
             'curSongKey': str(song.blob_key.key()),
             'play': self.session.play,
             'endFlag': self.session.endFlag,
-            'timestamp': str(time.mktime(self.session.timestamp.timetuple()))
+            'timestamp': str(time_diff.seconds)
         }
         logging.info('get_song_message: ' + str(sessionUpdate))
         return simplejson.dumps(sessionUpdate)
@@ -125,6 +142,7 @@ class SessionUpdater():
     # Send the most recently added blob key
     def get_blob_message(self, blob_key):
         sessionUpdate = {
+            'type': 'song_upload',
             'newSongKey': str(blob_key.key())
         }
         logging.info('get_blob_message: ' + str(sessionUpdate))
@@ -154,6 +172,7 @@ class SessionUpdater():
             listeners.append(lst.email())
             
         sessionUpdate = {
+            'type': 'remove_listener',
             'listeners': listeners
         }
         message = simplejson.dumps(sessionUpdate)
@@ -303,7 +322,7 @@ class RemoveListener(webapp.RequestHandler):
 class GetLiveSessions(webapp.RequestHandler):
     def get(self):
         session = SessionFromRequest(self.request).get_session()
-        logging.info('UploadSong: ' + str(session))
+        logging.info('GetLiveSessions: ' + str(session))
 #           user = users.get_current_user()
         if session:
             logging.info('session: ' + str(session.key().id_or_name()))
@@ -334,11 +353,11 @@ class UploadSong(blobstore_handlers.BlobstoreUploadHandler):
     def post(self):
         session = SessionFromRequest(self.request).get_session()
         filename = self.request.get('filename')
-        logging.info('UploadSong: ' + str(filename) + ', ' + str(session) + ', ' + str(session.host))
+        logging.info('UploadSong: ' + str(filename) + ', ' + str(session))
 #        title = self.request.get('title')
 #        artist = self.request.get('artist')
         if (session and session.host == users.get_current_user()):
-            logging.info('session: ' + str(session.key().id_or_name()))
+            logging.info('session: ' + str(session.key().id_or_name()) + ', ' + str(session.host))
             upload_files = self.get_uploads('file')
 
             # automatically play first song so we don't have to send separate update
@@ -378,5 +397,10 @@ class OpenPage(webapp.RequestHandler):
 class SessionInfo(webapp.RequestHandler):
     def get(self):
         session = SessionFromRequest(self.request).get_session()
-        logging.info('SessionInfo: ' + str(session.key().id_or_name()))
-        self.response.out.write(SessionUpdater(session).get_session_message())
+        logging.info('SessionInfo: ' + str(session))
+        
+        # when setting up test clients, for some reason their sessions are None
+        if not session:
+            logging.error('Missing session for request ' + str(self.request))
+        else:
+            self.response.out.write(SessionUpdater(session).get_session_message())

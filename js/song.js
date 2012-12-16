@@ -209,9 +209,6 @@ function Song(id, url, position) {
    ---------------------------------------
    Methods
    ---------------------------------------
-   1355122331.0,
-   1355122357.0
-   1355122388.0
  */
 
 /*
@@ -316,11 +313,13 @@ function nextSong() {
 		
 		// check if song list is empty
 		if (songs.length == 0) {
+			// don't use alerts here as they appear to disconnect channels...
 			if (hostingIndex != -1) {
-				alert('Please choose another song to continue your session.');
-				// TODO: send some kind of update to server?
+				$('#songs').empty();
+				$('#songs').append('<li>Please upload another song to contiune your session.</li>');
 			} else {
-				$('#song_playback').html($('#song_playback').html() + ' (Waiting on host...)');
+				$('#songs').empty();
+				$('#songs').append('<li>Waiting on host to upload another song...</li>');
 			}
 		}
 		// otherwise play next song
@@ -332,10 +331,53 @@ function nextSong() {
 				updateChannel(1, 0, 0);
 			}
 			playSong(0);
+			updateSongList();
 		}
-
-		updateSongList();
 	}
+}
+
+/*
+   Updates song from server message
+ */
+function songUpdate(song_key, play, end, timestamp, host_email, join_hosted_session) {
+
+	// check if we have song
+	if (song_key) {
+
+		var joinHostedSession = false;
+
+		// check if we should play/pause
+		var play = typeof play == 'undefined' || play;
+
+		// add upcoming current songs only if listener or explicitly joining hosted session
+		if (hostingIndex == -1 || join_hosted_session) {
+			// check if we have timestamp
+			if (timestamp) {
+
+				// calculate offset to start playing song
+				/*
+				var now = Math.round((new Date()).getTime() / 1000);
+				var offset = now - message.timestamp;
+				console.log('offsets: ' + message.timestamp + ', ' + now + ', ' + offset);
+				*/
+
+				addSong(song_key, timestamp, play, true);
+			} else {
+				addSong(song_key, 0, play, true);
+			}
+		}
+	}
+	
+	// session was killed
+	if (end) {
+		if (host_email) {
+			$('#song_playback').html($('#song_playback').html() + ' (' + host_email + ' ended the session)');
+		} else {
+			$('#song_playback').html($('#song_playback').html() + ' (Host ended the session)');
+		}
+		stopSong();
+	}
+
 }
 
 /*
@@ -354,7 +396,7 @@ function updateSongList() {
 
 /*
    Adds song to list if we don't already have it.
-   This also plays pauses existing songs.
+   This also plays/pauses existing songs.
     - url: url of song to add
     - offset: offset of playing song
     - play: play song
