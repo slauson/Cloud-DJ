@@ -1,0 +1,50 @@
+\documentclass{sig-alternate}
+
+\usepackage{hyperref}
+\usepackage{cite}
+\usepackage{url}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\usepackage{color}
+\usepackage{comment}
+\usepackage{multirow}
+\usepackage{booktabs}
+\usepackage{listings}
+
+\newcommand{\cm}{\textcolor{magenta}}
+\newcommand{\cb}{\textcolor{blue}}
+\newcommand{\cred}{\textcolor{red}}
+\newcommand{\cg}{\textcolor{green}}
+
+\begin{document}
+
+\hypersetup
+{
+    pdfauthor={Amanda Hittson, Rebecca Lam, Josh Slauson},
+    pdfsubject={CS739},
+    pdftitle={ClouDJ: A Music Sharing Application},
+    pdfkeywords={Music player, Cloud}
+}
+
+\title{ClouDJ: A Music Sharing Application}
+
+\author{
+    \alignauthor Amanda Hittson, Rebecca Lam, Josh Slauson \\
+        \affaddr{University of Wisconsin-Madison}\\
+%%        \email{\{amanda.hittson,zhaiyan920\}@gmail.com}
+}
+
+\maketitle
+
+\input{abstract}
+\input{intro}
+\input{design}
+\input{implementation}
+\input{evaluation}
+\input{futurework}
+\input{conc}
+
+\bibliographystyle{abbrv}
+\bibliography{my}
+
+\end{document}
