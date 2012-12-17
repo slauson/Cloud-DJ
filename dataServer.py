@@ -32,6 +32,13 @@ class ACLEntry(db.Model):
     plisteners = db.ListProperty(str, indexed=False)     # List of users who are allowed to listen to this one                                              
     psessions  = db.ListProperty(str, indexed=False)     # List of users whose session this user can listen to                                              
 
+###############################################################
+# identify by channel ID
+class ChannelEntry(db.Model):
+    token = db.StringProperty()
+    user = db.UserProperty()
+    session_key = db.StringProperty()  
+    free = db.BooleanProperty()
     
 ###############################################################
 # Session classes and structures 
@@ -237,30 +244,26 @@ class SessionListUpdater():
 class ChannelDisconnect(webapp.RequestHandler):
     def post(self):
         channel_id = self.request.get('from')
-        channel_id = channel_id.split("_", 1)
-        if (len(channel_id) > 1):
-            if (channel_id[0] != ""):
-                userID = channel_id[0]
-        session_key = channel_id[-1] # extract session key
+        
+        # get channel entry 
+        logging.info('ChannelDisconnect: ' + str(channel_id))
+        chEntry = ChannelEntry.get_by_key_name(channel_id)
+        
+        user = chEntry.user
+        session_key = chEntry.session_key
         session = Session.get_by_key_name(session_key)
         
-        user = None
-        
-        if (session and userID == session.host.user_id()):
-            user = session.host
+        if (session and user == session.host):
             SessionUpdater(session).remove_session()
-        elif (session):
-            # Get user_ids of all listeners
-            for lst in session.listeners:
-                if userID == lst.user_id():
-                    user = lst
-                    SessionUpdater(session).remove_listener(user)
-        logging.info('ChannelDisconnect: ' + str(channel_id[0]) + ', ' + str(channel_id[1]) + ', ' + str(session) + ', ' + str(user))
+        elif (session and user in session.listeners):
+            SessionUpdater(session).remove_listener(user)
                 
-        if user:
-            q = Session.all().filter('host =', user)
-            for ses in q.run(read_policy=db.STRONG_CONSISTENCY):
-                SessionUpdater(ses).remove_session()
+        q = Session.all().filter('host =', user)
+        for ses in q.run(read_policy=db.STRONG_CONSISTENCY):
+            SessionUpdater(ses).remove_session()
+            
+        chEntry.free = True
+        chEntry.put()
             
 # /logout
 class Logout(webapp.RequestHandler):
@@ -277,6 +280,11 @@ class Logout(webapp.RequestHandler):
         q = Session.all().filter('host =', user)
         for ses in q.run(read_policy=db.STRONG_CONSISTENCY):
             SessionUpdater(ses).remove_session()
+            
+        q = ChannelEntry.all().filter('user =', user)
+        for ch in q.run():
+            ch.free = True
+            ch.put()
 
 # Make updates to session information
 # Message from host

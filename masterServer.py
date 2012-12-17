@@ -63,8 +63,8 @@ class ACLHandler():
             while (host in plistener_entry.psessions):
                 plistener_entry.psessions.append(host)
             plistener_entry.put()
-
-
+    
+    
 class MainPage(webapp.RequestHandler):
     def get(self):
         user = users.get_current_user()
@@ -148,14 +148,42 @@ class MainPage(webapp.RequestHandler):
 
 
         # Deployed version:
-        session_link = 'http://' + app_identity.get_default_version_hostname() + '/?session_key=' + session_key
+        session_link = 'http://3.' + app_identity.get_default_version_hostname() + '/?session_key=' + session_key
         #session_link = 'http://localhost:8080/?session_key=' + session_key
         logout_link = users.create_logout_url(self.request.uri)
 
         if session:
-
-            token = channel.create_channel(user_id + "_" + session_key)
-            template_values = {'token': token,
+            channels = ChannelEntry.all()
+            # Check if user has token
+            chEntry = channels.filter('user =', user).get()
+            if chEntry:
+                chEntry.free = False
+                chEntry.session_key = session_key
+                channel_token = chEntry.token       # use old token
+                chEntry.put()
+            else:
+                # check for free channels
+                chEntry = channels.filter('free =', True).get()
+                if chEntry:
+                    chEntry.free = False
+                    chEntry.session_key = session_key
+                    channel_token = chEntry.token       # use old token
+                    chEntry.put()
+                else:                    
+                    channel_key = session_key_gen() 
+                    channel_token = channel.create_channel(channel_key)
+                    
+                    # create a new entry
+                    chEntry = ChannelEntry(key_name = channel_key,
+                                           token = channel_token,
+                                           user = user,
+                                           session_key = session_key,
+                                           free = False)
+                    chEntry.put()
+                
+                
+            
+            template_values = {'token': channel_token,
                                'me': user_id,
                                'me_email': user.email(),
                                'session_key': session_key,
