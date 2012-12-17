@@ -1,4 +1,108 @@
 \section{Implementation}
 \label{sec:implementation}
-Here is how to cite things, 
-see \cite{appengine}, \cite{googlehangouts} or \cite{spotify}.
+
+\subsection{Client and Server Communication}
+Our client is written in JavaScript and uses SoundManager, a
+JavaScript audio player API. In contrast, our server code is
+written in Python 2.7. Both use the Google App Engine API. 
+
+When the client wants to contact the server, it issues an HTTP
+request, which is handled by the appropriate Python script handler.
+Handlers in Google App Engine can only serve requests within a
+time limit, which is why we chose to store session data within
+the Datastore.
+
+In contrast, when the server wants to contact a client, is uses 
+the Channel service. Channels are persistent connections that 
+allow updates to propagate to clients without the use of polling.
+This is the mechanism with which we send updates to participants
+of a session. A channel is created as follows: 
+\begin{enumerate}
+  \item The client contacts the server
+  \item The server generates a channel ID and sends back a token
+  \item The client connects to the channel using the token
+\end{enumerate}
+The client receives updates by listening on the channel by opening
+a socket and does appropriate actions based on the message received.
+Updates to the channel are made via HTTP requests from clients. When
+a client disconnects from the channel, a message containing the 
+corresponding channel ID is sent to the server, and appropriate
+cleanup is performed.	
+
+\subsection{Execution Flow}
+% Execution flow
+
+\subsection{Session Synchronization}
+In order to synchronize playback among different clients, we use 
+control messages, which are propagated via channels as described
+above. Only hosts may issue commands such as play, pause, and 
+next for the session. The ``play'' and ``pause'' commands are sent
+only when the host clicks on the pause and play buttons, and the 
+``next'' command is sent when the host switches songs or if the
+host clicks on the ``next'' button. We separate the problem of synchronization 
+into two parts: joining an existing session and updating the
+current session. In both cases we utilize a timestamp, which is 
+updated each time a play or next command is sent by the host client
+and is sent with the control message. 
+
+As seen in Figure~\ref{fig:syncJoin} when a user joins a session, 
+the server sends the user the elapsed time since the last stored timestamp. 
+The user then start the song with the value returned by the server as 
+the offset. If the song is playing when the user joins the session, 
+it will start playing at the specified offset. If the song is paused when 
+the user joins the session, the retrieved offset will not be the correct 
+elapsed time; however, this is corrected when the host sends a ``play'' 
+message to the server, which stores another timestamp and propagates
+the correct offset to all session listeners.
+
+This timestamping synchronization is used mainly when a user joins a session.
+In the other case where participants update their current session upon 
+recieving a control message, the offset can usually be inferred based on the local state. 
+For instance, if the user receives a ``next'' message, then they
+start the next song with an offset of 0. If a user receives a ``pause" 
+message, they stop the current song and keep the elapsed time as the offset.
+If the user receives a ``play'' message they start the current song at the 
+local offset, which was set when the ``pause'' message was received. The exception to this 
+is if the current paused song is at the beginning, indicating
+that this user has joined the session while the song was paused or that this user is
+ahead of the host and is waiting for a control message from the host. 
+In this case the user adjusts the current song offset with what 
+they recieve from the server. Conversely, if the listener lags behind the host, then they will
+receive a ``next'' message before the end of the song and start the next song. Figure~\ref{fig:syncUsers}
+illustrates the timeline in the cases where a listener is behind the host and where a listener
+is ahead of the host.
+
+% TODO: Add figure here describing the synchronization process
+% Joining a session
+% Current session
+\begin{figure}[h]
+% EXAMPLE POSSIBLE USAGES, DEPENDING ON PICTURE FILE:
+%\includegraphics{myfig.pdf}
+%\includegraphics[width=60mm]{myfig.png}
+%\includegraphics[height=60mm]{myfig.jpg}
+%\includegraphics[scale=0.75]{myfig.pdf}
+%\includegraphics[angle=45,width=52mm]{myfig.jpg}
+	\centering
+	\begin{subfigure}
+		\centering
+		\label{fig:syncJoin}
+	\end{subfigure}
+	
+	\begin{subfigure}
+		\centering
+		\label{fig:syncUsers}
+	\end{subfigure}
+	\caption{The synchronization timeline for a) joining a session and b) updating a session}
+\end{figure}
+
+
+\subsection{Design Considerations}
+	Performance:
+		buffered songs on client
+	Scalability:
+		incremental messages: 
+			listeners
+			only on song transitions or join of session
+	Availability: (failure tolerance)
+		- Session info stored on Datastore
+		- As long as google app engine up, our app is up
