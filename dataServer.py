@@ -71,17 +71,18 @@ class SessionUpdater():
             return
 
         logging.info('send_message to ' + str(self.session.host.user_id() + '_' + self.session.key().id_or_name()) + ': ' + str(message))
-        channel.send_message(self.session.host.user_id() + '_' + self.session.key().id_or_name(), message)
         
-        for lst in self.session.listeners:
-            user_id = lst.user_id()
+        q = ChannelEntry.all().filter('session_key = ', self.session.key().name())
+        
+        for ch in q.run():
+            user_id = ch.user.user_id()
 
             # handle test users
             if not user_id:
-                user_id = lst.email()
+                user_id = ch.user.email()
 
             logging.info('send_message to ' + str(user_id + '_' + self.session.key().id_or_name()) + ': ' + str(message))
-            channel.send_message(user_id + '_' + self.session.key().id_or_name(), message)
+            channel.send_message(ch.key().name(), message)
 
     # Update message for non-incremental updates
     # Returns entire model  
