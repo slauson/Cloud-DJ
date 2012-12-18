@@ -329,9 +329,9 @@ function nextSong() {
 				hostingIndex++;
 				console.log('increment hostingIndex next song: ' + hostingIndex);
 				updateChannel(1, 0, 0);
+				playSong(0);
+				updateSongList();
 			}
-			playSong(0);
-			updateSongList();
 		}
 	}
 }

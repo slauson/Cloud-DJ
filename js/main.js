@@ -204,6 +204,8 @@ function getSessionDetails() {
    Toggle mute of all songs
  */
 function userToggleMute() {
+	console.log('userToggleMute()');
+
 	if (soundManager.ok()) {
 		if (songs.length > 0 && songs[0].isMuted()) {
 			soundManager.unmute();
