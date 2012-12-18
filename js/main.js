@@ -18,7 +18,11 @@ var listeners = new Array();
 // this is -1 if not hosting, otherwise the playlist index of the current song
 var hostingIndex = -1;
 
+// true if handlers and channel are setup
 var initialized = false;
+
+// array of timestamps of when songs ended (used for testing)
+var timestamps = new Array();
 
 /*
 
@@ -204,6 +208,8 @@ function getSessionDetails() {
    Toggle mute of all songs
  */
 function userToggleMute() {
+	console.log('userToggleMute()');
+
 	if (soundManager.ok()) {
 		if (songs.length > 0 && songs[0].isMuted()) {
 			soundManager.unmute();
