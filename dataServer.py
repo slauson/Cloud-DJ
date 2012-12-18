@@ -39,6 +39,7 @@ class ChannelEntry(db.Model):
     user = db.UserProperty()
     session_key = db.StringProperty()  
     free = db.BooleanProperty()
+    expire = db.DateTimeProperty()
     
 ###############################################################
 # Session classes and structures 
@@ -265,6 +266,11 @@ class ChannelDisconnect(webapp.RequestHandler):
             
         chEntry.free = True
         chEntry.put()
+        
+        # Delete expired entries
+        q = ChannelEntry.all().filter('expire <', datetime.datetime.now())
+        for expired in q.run():
+            db.delete(expired.key())
             
 # /logout
 class Logout(webapp.RequestHandler):

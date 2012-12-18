@@ -152,35 +152,38 @@ class MainPage(webapp.RequestHandler):
         #session_link = 'http://localhost:8080/?session_key=' + session_key
         logout_link = users.create_logout_url(self.request.uri)
 
-        if session:
-            channels = ChannelEntry.all()
-            # Check if user has token
-            chEntry = channels.filter('user =', user).get()
+        if session:            
+            # check for free channels and channels this user is already using
+            userCh = ChannelEntry.all().filter('user =', user).get()
+            freeCh = ChannelEntry.all().filter('free =', True).get()
+
+            if userCh:
+                chEntry = userCh
+            elif freeCh:
+                chEntry = freeCh
+            else:
+                chEntry = None
+                
             if chEntry:
+                chEntry.user = user
                 chEntry.free = False
                 chEntry.session_key = session_key
                 channel_token = chEntry.token       # use old token
                 chEntry.put()
-            else:
-                # check for free channels
-                chEntry = channels.filter('free =', True).get()
-                if chEntry:
-                    chEntry.free = False
-                    chEntry.session_key = session_key
-                    channel_token = chEntry.token       # use old token
-                    chEntry.put()
-                else:                    
-                    channel_key = session_key_gen() 
-                    channel_token = channel.create_channel(channel_key)
-                    
-                    # create a new entry
-                    chEntry = ChannelEntry(key_name = channel_key,
-                                           token = channel_token,
-                                           user = user,
-                                           session_key = session_key,
-                                           free = False)
-                    chEntry.put()
+            else:               
+                channel_key = session_key_gen() 
+                channel_token = channel.create_channel(channel_key, duration_minutes = 1440)    # For max token reuse....
                 
+                exp_time = datetime.datetime.now() + datetime.timedelta(minutes = 1440)         # 24 hr expiration
+                # create a new entry
+                chEntry = ChannelEntry(key_name = channel_key,
+                                       token = channel_token,
+                                       user = user,
+                                       session_key = session_key,
+                                       free = False,
+                                       expire = exp_time)
+                chEntry.put()
+            
                 
             
             template_values = {'token': channel_token,
