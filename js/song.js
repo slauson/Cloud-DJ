@@ -44,9 +44,10 @@ function Song(id, url, position) {
 		onfinish:function() {
 			console.log(this.id + ' done playing');
 
-			// go to next song
+			timestamps.push(new Date().getTime());
+			console.log(timestamps);
 
-			// wait for host update before going to next song
+			// go to next song
 			nextSong();
 		},
 		whileloading:function() {
@@ -322,9 +323,8 @@ function nextSong() {
 				$('#songs').append('<li>Waiting on host to upload another song...</li>');
 			}
 		}
-		// otherwise play next song
+		// otherwise play next song if host (listeners wait for channel update)
 		else {
-
 			if (hostingIndex != -1) {
 				hostingIndex++;
 				console.log('increment hostingIndex next song: ' + hostingIndex);

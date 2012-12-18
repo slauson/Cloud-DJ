@@ -18,7 +18,11 @@ var listeners = new Array();
 // this is -1 if not hosting, otherwise the playlist index of the current song
 var hostingIndex = -1;
 
+// true if handlers and channel are setup
 var initialized = false;
+
+// array of timestamps of when songs ended (used for testing)
+var timestamps = new Array();
 
 /*
 
