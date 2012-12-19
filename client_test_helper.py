@@ -6,7 +6,6 @@ Client test helper.
 
 import httplib2
 import socket
-import time
 
 # what url to call
 URL = 'http://localhost:8080/?testing'
