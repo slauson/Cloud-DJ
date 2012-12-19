@@ -1,12 +1,9 @@
 \section{Design}
 \label{sec:design}
-To create ClouDJ, we will implement the design described 
+To create ClouDJ, we implemented the design described 
 in subsections \ref{sec:frontend} and \ref{sec:roles} 
 by integrating Google App Engine. 
-Figure \ref{fig:arch} depicts the overall system and how each element 
-interacts during a normal session. If we have enough time, 
-we will consider multi-host sessions, dynamic access 
-control lists, and adding remote files to session playlists.
+Figure \ref{fig:arch} depicts the overall system.
 
 \begin{figure}[h]
 % EXAMPLE POSSIBLE USAGES, DEPENDING ON PICTURE FILE:
@@ -15,43 +12,35 @@ control lists, and adding remote files to session playlists.
 %\includegraphics[height=60mm]{myfig.jpg}
 %\includegraphics[scale=0.75]{myfig.pdf}
 %\includegraphics[angle=45,width=52mm]{myfig.jpg}
-\caption{Depiction of typical message flow for one music session. 
-1) Host client sends a message to the master server telling it to create a session. 
-2) The master server chooses a session server to serve the session and 
-sends it a create session message. 
-3) The chosen session server sends a message back to the 
-host client to establish the connection. 
-4) The host then sends data received from the host client to client listeners.
-}
+\caption{The system architecture.}
 \label{fig:arch}
 \end{figure}
+
+\subsection{Roles}
+\label{sec:roles}
+There are three major roles in our system: 
+the master handler, session handler, and client. Clients own 
+and store music, can share their music with others 
+and can listen to music shared by others. The master handler provides 
+access control, starts sessions for users who want to host, and
+acts as a liaison between the clients and session servers. The session 
+handler is in charge of handling synchronization messages between clients
+and serving content.
 
 \subsection{Front End}
 \label{sec:frontend}
 A session is an abstraction in which multiple users 
 may listen to one song that is hosted by a single user. 
-Our front end application will allow a user to either 
+Our front end application allows a user to either 
 create a session and become a host, or join an existing 
 session and become a listener. When acting as a host, 
 a user may add or remove songs from the session playlist, 
-select the currently playing song, and play/pause the 
-current song. When acting as a listener, the user has 
+play or pause the current song, and skip to the next song. 
+When acting as a listener, the user has 
 no control over what song is being played. Users can 
 see all sessions that they are able to join. Only 
 members of a user's access control list (ACL) may 
 see or join any session in which that user is a host.
-
-\subsection{Roles}
-\label{sec:roles}
-There are three major roles in our system: 
-the master server, session server, and client. Clients own 
-and store music, can share their music with others 
-and can listen to music shared by others. There is a 
-single master server that provides access control, 
-starts sessions for users who want to host and provides 
-minimally acts as a liaison between the clients and 
-session servers. Session servers' main functionality 
-is streaming music from host-client to listener-clients.
 
 \subsection{Back End}
 \label{sec:backend}
@@ -60,12 +49,12 @@ the frontend. The master server keeps track of users
 currently online, user ACLs, and user membership lists 
 (ACLs it is a member of). It also is responsible for 
 maintaining a session table, a table that maps host 
-users to the session servers (this is a one-to-one mapping). 
+users to sessions (this is a one-to-one mapping). 
 When a client logs on, the master server informs each 
-session server associated to a host on the client's 
+session associated to a host on the client's 
 membership list that this client is a potential listener.
 
-The session server is the workhorse of the system. It 
+The session handler is the workhorse of the system. It 
 services requests for sessions it is in charge of by 
 routing data from the host client to relevant clients 
 (listeners). It maintains the list of listeners and 
@@ -81,19 +70,17 @@ has access to its user's music and playlists and
 also keeps track of data such as the user's current 
 session and the user's potential sessions (sessions 
 this user can access). For the current session, the 
-client keeps it's session server address and stream. 
+client keeps track of the current session key and relevant song information. 
 For the potential sessions, the client keeps the host, 
 session server address, and currently playing song.
 
 Sessions are created when a client contacts the master 
-server about hosting a new session. The master server 
-then contacts a session server to create a new session. 
-On success, the session server contacts the client, 
+handler about hosting a new session. The master handler 
+then creates a new session in memory and responds to the client, 
 which updates its current session information. 
-Clients may join sessions by contacting the session 
-server, at which point, data from the host will be 
-sent to the session server, which will forward the 
-stream to any listeners. Notice that after a session 
+Clients may join sessions by contacting the master 
+handler, which updates the session information in memory
+and notifies everyone in the session. Notice that after a session 
 is established, the client no longer communicates 
-with the master server and the master server handles 
-no client data, only client meta-data. 
+with the master handler and the master handles 
+no music data. 
