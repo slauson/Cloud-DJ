@@ -148,9 +148,16 @@ function handleServerMessage(message) {
 
 	// song update
 	if (message.type == 'song_update') {
+		// add song end timestamp
+		if (songEndTimestamp != 0) {
+			songEndTimestamps.push(songEndTimestamp);
+			songEndTimestamp = 0;
+		}
+
 		console.log('newSongTimestamps: ' + newSongTimestamps);
 		console.log('songBeginTimestamps: ' + songBeginTimestamps);
 		console.log('songEndTimestamps: ' + songEndTimestamps);
+
 		newSongTimestamps.push(new Date().getTime());
 		songUpdate(message.curSongKey, message.play, message.endFlag, message.timestamp, message.hostEmail, false);
 	}

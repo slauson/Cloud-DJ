@@ -312,10 +312,6 @@ function nextSong() {
 
 	if (songs.length > 0) {
 
-		// add song end timestamp
-		songEndTimestamps.push(songEndTimestamp);
-		songEndTimestamp = 0;
-
 		songs.shift().cleanup();
 		
 		// check if song list is empty
