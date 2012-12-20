@@ -21,8 +21,17 @@ var hostingIndex = -1;
 // true if handlers and channel are setup
 var initialized = false;
 
+// array of timestamps of new songs were added (used for testing)
+var newSongTimestamps = new Array();
+
+// array of timestamps of when songs began (used for testing)
+var songBeginTimestamps = new Array();
+
+// song end timestamp (used for testing)
+var songEndTimestamp = 0
+
 // array of timestamps of when songs ended (used for testing)
-var timestamps = new Array();
+var songEndTimestamps = new Array();
 
 /*
 
@@ -139,6 +148,17 @@ function handleServerMessage(message) {
 
 	// song update
 	if (message.type == 'song_update') {
+		// add song end timestamp
+		if (songEndTimestamp != 0) {
+			songEndTimestamps.push(songEndTimestamp);
+			songEndTimestamp = 0;
+		}
+
+		console.log('newSongTimestamps: ' + newSongTimestamps);
+		console.log('songBeginTimestamps: ' + songBeginTimestamps);
+		console.log('songEndTimestamps: ' + songEndTimestamps);
+
+		newSongTimestamps.push(new Date().getTime());
 		songUpdate(message.curSongKey, message.play, message.endFlag, message.timestamp, message.hostEmail, false);
 	}
 	// session update

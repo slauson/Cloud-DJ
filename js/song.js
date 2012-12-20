@@ -33,6 +33,7 @@ function Song(id, url, position) {
 		},
 		onplay:function() {
 			console.log(this.id + ' playing');
+			songBeginTimestamps.push(new Date().getTime());
 
 			// set loading message
 			if (this.loaded) {
@@ -43,9 +44,7 @@ function Song(id, url, position) {
 		},
 		onfinish:function() {
 			console.log(this.id + ' done playing');
-
-			timestamps.push(new Date().getTime());
-			console.log(timestamps);
+			songEndTimestamp = new Date().getTime();
 
 			// go to next song
 			nextSong();
@@ -63,6 +62,8 @@ function Song(id, url, position) {
 			}*/
 		},
 		whileplaying:function() {
+			songEndTimestamp = new Date().getTime();
+
 			// update time of song
 			var str = getTimeStr(this.position/1000) + ' / ' + getTimeStr(this.duration/1000);
 			
@@ -310,6 +311,7 @@ function nextSong() {
 	console.log('nextSong');
 
 	if (songs.length > 0) {
+
 		songs.shift().cleanup();
 		
 		// check if song list is empty

@@ -39,6 +39,7 @@ class ChannelEntry(db.Model):
     user = db.UserProperty()
     session_key = db.StringProperty()  
     free = db.BooleanProperty()
+    expire = db.DateTimeProperty()
     
 ###############################################################
 # Session classes and structures 
@@ -265,6 +266,11 @@ class ChannelDisconnect(webapp.RequestHandler):
             
         chEntry.free = True
         chEntry.put()
+        
+        # Delete expired entries
+        q = ChannelEntry.all().filter('expire <', datetime.datetime.now())
+        for expired in q.run():
+            db.delete(expired.key())
             
 # /logout
 class Logout(webapp.RequestHandler):
@@ -320,6 +326,7 @@ class UpdateChannel(webapp.RequestHandler):
                 }
                 # this needs to be sent to all potential listeners
                 #SessionListUpdater().send_update(simplejson.dumps(message))   # Send only the change
+        logging.info('UpdateChannel stats: ' + str(len(session.listeners)) + ' listeners, ' + str(Session.all().count()) + ' sessions')
 
 # Remove self from listeners
 # /remove
