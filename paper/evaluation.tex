@@ -104,3 +104,40 @@ session information.
 	\caption{Response time when adding more listeners.}
 	\label{fig:addListenersResponseTime}
 \end{figure}
+
+\subsection{Availability}
+
+For the availability of our system, we are interested in session
+availability among failures of certain system components. There are
+several components that can possibly fail including the host,
+listener, session server, and master server. To evaluate the
+effects of such failures, we artificially caused each role to fail
+during an active session and observed the system behavior for the
+host, listener, and other clients.
+
+When the host of a session goes down, the system mainly continues
+to operate as normal. Any listeners in the session of the down host
+will continue playing the current song until completion. At that
+time, they will wait until the host reconnects and updates the
+session server with new information. Other clients will still be
+able to join the session, but will have to wait like other
+listeners. Once the host reconnects, it rejoins its hosted session
+and continues playback as if it just joined the session.
+
+A down listener has very little impact on the system. The session
+server will detect the channel failure and cleanup necessary state
+associated with the listener. Other listeners as well as the host
+of the session will not be impacted by the failed listener.
+
+When the master server goes down, active sessions continue to
+operate as before. Hosts and listeners can continue to listen
+together to existing and newly added songs. However, new clients
+attempting to connect to the system will have their requests time
+out because the master server handles all initial client connections.
+
+If the session server goes down, all session updates will fail.
+Clients will finish their current song of their session and then
+will have to wait for the session server to come back up. New clients
+first connecting to the system will be able to login, but will not
+see any sessions. They will also be unable to start a session until
+the session server comes back up.
