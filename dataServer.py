@@ -295,7 +295,10 @@ class UpdateChannel(webapp.RequestHandler):
     def post(self):
         session = SessionFromRequest(self.request).get_session()
         user = users.get_current_user()
-        logging.info('UpdateChannel stats: ' + str(len(session.listeners)) + ' / ' + str(Session.all().count()))
+        if session:
+            logging.info('UpdateChannel stats: ' + str(len(session.listeners)) + ' / ' + str(Session.all().count()))
+        else:
+            logging.info('UpdateChannel stats: ' + str(0) + ' / ' + str(Session.all().count()))
         logging.info('UpdateChannel: ' + str(self.request))
 
         if session and user == session.host:
