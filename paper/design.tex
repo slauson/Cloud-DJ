@@ -30,7 +30,7 @@ may listen to one song that is hosted by a single user.
 Our front end (client) application allows a user to either 
 create a session and become a host, or join an existing 
 session and become a listener. When acting as a host, 
-a user may add songs from the session playlist, 
+a user may add songs to the session playlist, 
 play or pause the current song, and skip to the next song. 
 When acting as a listener, the user has 
 no control over what song is being played. Users can 
@@ -89,7 +89,7 @@ As shown in Figure~\ref{fig:arch}, the general execution of the ClouDJ applicati
 is as as follows:
 \begin{enumerate}
   \item The client contacts the server
-  \item The server performs executes the handler based on the request
+  \item The server executes the handler based on the request
   \item The handler runs and propagates updates to session participants
   \item The client receives the server response and performs actions 
 \end{enumerate}
@@ -111,7 +111,7 @@ and notifies everyone in the session of the new listener.
 After a session is established, the client no longer communicates 
 with the master handler. When a user leaves a session, the client
 contacts the session handler telling it to remove itself from from
-the listener list if it is not the host. If it is the host the
+the listener list if it is not the host. If it is the host, the
 session handler notifies all listeners that the session has ended and 
 removes the session and corresponding song data from the datastore
 and blobstore.
