@@ -19,7 +19,7 @@ the master handler, session handler, and client. Clients own
 and store music, can share their music with others 
 and can listen to music shared by others. The master handler provides 
 access control, starts sessions for users who want to host, and
-acts as a liaison between the clients and session servers. The session 
+connects users to their desired session. The session 
 handler is in charge of handling synchronization messages between clients
 and serving content.
 
@@ -52,22 +52,27 @@ The backend infrastructure is more complicated than
 the frontend. The master server keeps track of users 
 currently online, user ACLs, and user membership lists 
 (ACLs it is a member of). It also is responsible for 
-maintaining a session table, a table that maps host 
-users to sessions (this is a one-to-one mapping). 
-When a client logs on, the master server informs each 
-session associated to a host on the client's 
-membership list that this client is a potential listener.
-
-The session handler is the workhorse of the system. It 
-services requests for sessions it is in charge of by 
-routing data from the host client to relevant clients 
-(listeners). It maintains the list of listeners and 
-potential listeners. A potential listener is a client 
-who could listen to this session, but is currently not. 
+adding entries to the session table, a table that keeps track
+of session information including host, listeners, and current song. 
+It also maintains the potential listener
+list for each session. A potential listener is a client 
+who could listen to the session, but is currently not. 
 In other words, these are the clients on the host client's 
 ACL that are logged in but not listening to this 
-session. Session servers also take care of session 
-cleanup when a session ends (or fails). 
+session. When a client logs on, the master server retrieves each 
+session associated to a host on the client's 
+membership list and sends back a list of sessions it could
+potentially join. It also adds the client to the potential
+listener list for each of those sessions.
+
+The session handler is the workhorse of the system. It 
+services requests for all sessions by routing data from the 
+host client to relevant clients (listeners). It is in charge 
+of maintaining the data in the session table and propagating 
+commands from the host to all listeners. It is responsible
+for handling uploads and serving song data. The session handler 
+also takes care of session cleanup when a session ends (or 
+host disconnects). 
 
 \subsubsection{Storage}
 \label{sec:storage}
@@ -128,9 +133,77 @@ handler then updates the session playlist in the datastore and sends the
 blob key to all clients in the session. The clients then fetch the song 
 from the blobstore. 
 
-Not surprisingly, the ``play'', ``pause,'' and ``next'' messages 
+Unsurprisingly, the ``play'', ``pause,'' and ``next'' messages 
 indicate when the host wants to unpause, pause, and skip the current song, respectively.
 The host sends these control messages to the session handler, which updates
 the session in the datastore and then propagates the message to all session
 participants. The clients then peform the appropriate action. We elaborate on
 playback synchronization among clients in Section~\ref{sec:sync}.
+
+\subsubsection{Session Synchronization}
+\label{sec:sync}
+
+\begin{figure}[t!]
+	\centering
+	\begin{subfigure}[b]{0.5\textwidth}
+		\centering
+		\includegraphics[width=85mm]{joinSessionPlay.png}
+		\caption{Joining a session while a song is playing}
+		\label{fig:syncJoinPlay}
+	\end{subfigure}
+	
+	\begin{subfigure}[b]{0.5\textwidth}
+		\centering
+		\includegraphics[width=85mm]{joinSessionPause.png}
+		\caption{Joining a session while a song is paused}
+		\label{fig:syncJoinPause}
+	\end{subfigure}
+	\caption{Synchronization messages when a user joins a session}
+	\label{fig:syncJoin}
+\end{figure}
+
+In order to synchronize playback among different clients, we use 
+control messages, which are propagated as described in Section~\ref{sec:channel}. 
+Only hosts may issue commands such as play, pause, and 
+next for the session. The ``play'' and ``pause'' commands are sent
+only when the host clicks on the pause and play buttons, and the 
+``next'' command is sent when the host switches songs or if the
+host clicks on the ``next'' button. We separate the problem of synchronization 
+into two parts: joining an existing session and updating the
+current session. In both cases we utilize a timestamp, which is 
+updated each time a play or next command is sent by the host client
+and is sent with the control message. 
+
+As seen in Figure~\ref{fig:syncJoin} when a user joins a session, 
+the server sends the user the elapsed time since the last stored timestamp. 
+The user then start the song with the value returned by the server as 
+the offset. If the song is playing when the user joins the session, 
+it will start playing at the specified offset. If the song is paused when 
+the user joins the session, the retrieved offset will not be the correct 
+elapsed time; however, this is corrected when the host sends a ``play'' 
+message to the server, which stores another timestamp and propagates
+the correct offset to all session listeners.
+
+This timestamping synchronization is used mainly when a user joins a session.
+In the other case where participants update their current session upon 
+recieving a control message, the offset can usually be inferred based on the local state. 
+For instance, if the user receives a ``next'' message, then they
+start the next song with an offset of 0. If a user receives a ``pause" 
+message, they stop the current song and keep the elapsed time as the offset.
+If the user receives a ``play'' message they start the current song at the 
+local offset, which was set when the ``pause'' message was received. The exception to this 
+is if the current paused song is at the beginning, indicating
+that this user has joined the session while the song was paused or that this user is
+ahead of the host and is waiting for a control message from the host. 
+In this case the user adjusts the current song offset with what 
+they recieve from the server. Conversely, if the listener lags behind the host, then they will
+receive a ``next'' message before the end of the song and start the next song. Figure~\ref{fig:syncUsers}
+illustrates the timeline in the cases where a listener is behind the host and where a listener
+is ahead of the host.
+
+\begin{figure}[t!]
+	\centering
+	\includegraphics[width=85mm]{syncSessionUsers.png}
+	\caption{The synchronization timeline for a listener that's ahead of or behind the host}
+	\label{fig:syncUsers}
+\end{figure}

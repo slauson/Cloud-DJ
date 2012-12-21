@@ -1,11 +1,13 @@
 \section{Implementation}
 \label{sec:implementation}
+Our client is written in JavaScript and uses SoundManager, a
+JavaScript audio player API \cite{soundmanager}. In contrast, our server code is
+written in Python 2.7. Both use the Google App Engine API \cite{appengine}. In
+Section~\ref{sec:channel}, Section~\ref{sec:storage} and Section~\ref{sec:considerations} 
+we discuss how we utilize Google App Engine in our implementation.
 
 \subsection{Client and Server Communication}
-Our client is written in JavaScript and uses SoundManager, a
-JavaScript audio player API. In contrast, our server code is
-written in Python 2.7. Both use the Google App Engine API. 
-
+\label{sec:channel}
 When the client wants to contact the server, it issues an HTTP
 request, which is handled by the appropriate Python script handler.
 Handlers in Google App Engine can only serve requests within a
@@ -27,89 +29,47 @@ a socket and does appropriate actions based on the message received.
 Updates to the channel are made via HTTP requests from clients. When
 a client disconnects from the channel, a message containing the 
 corresponding channel ID is sent to the server, and appropriate
-cleanup is performed.	
+cleanup is performed.
 
-\subsection{Session Synchronization}
-\label{sec:sync}
+\subsection{Datastore and Blobstore}
+\label{sec:storage}
+As mentioned before, Datastore and Blobstore are used to store a 
+variety of information. Both Datastore and Blobstore have constant access time and are highly 
+reliable means of storage. Google App Engine's Datastore uses the
+High Replication Datastore built atop BigTable \cite{bigtable}. Writes
+use the Paxos algorithm and changes are propagated to non-participating
+replicas asynchronously. App Engine Datastore 
+provides high read/write availability, atomic transactions, and
+strong read consistency using get(). Queries, however, only 
+guarantee eventual consistency. Thus, for our application, we use
+get() to retrieve entries for time-sensitive operations, such as 
+propagating control commands from the host, and queries for less 
+urgent actions. \cite{appengine}\cite{datastore}
 
-\begin{figure}[b!]
-	\centering
-	\begin{subfigure}[b]{0.5\textwidth}
-		\centering
-		\includegraphics[width=85mm]{joinSessionPlay.png}
-		\caption{Joining a session while a song is playing}
-		\label{fig:syncJoinPlay}
-	\end{subfigure}
-	
-	\begin{subfigure}[b]{0.5\textwidth}
-		\centering
-		\includegraphics[width=85mm]{joinSessionPause.png}
-		\caption{Joining a session while a song is paused}
-		\label{fig:syncJoinPause}
-	\end{subfigure}
-	\caption{Synchronization messages when a user joins a session}
-	\label{fig:syncJoin}
-\end{figure}
-
-In order to synchronize playback among different clients, we use 
-control messages, which are propagated via channels as described
-above. Only hosts may issue commands such as play, pause, and 
-next for the session. The ``play'' and ``pause'' commands are sent
-only when the host clicks on the pause and play buttons, and the 
-``next'' command is sent when the host switches songs or if the
-host clicks on the ``next'' button. We separate the problem of synchronization 
-into two parts: joining an existing session and updating the
-current session. In both cases we utilize a timestamp, which is 
-updated each time a play or next command is sent by the host client
-and is sent with the control message. 
-
-As seen in Figure~\ref{fig:syncJoin} when a user joins a session, 
-the server sends the user the elapsed time since the last stored timestamp. 
-The user then start the song with the value returned by the server as 
-the offset. If the song is playing when the user joins the session, 
-it will start playing at the specified offset. If the song is paused when 
-the user joins the session, the retrieved offset will not be the correct 
-elapsed time; however, this is corrected when the host sends a ``play'' 
-message to the server, which stores another timestamp and propagates
-the correct offset to all session listeners.
-
-This timestamping synchronization is used mainly when a user joins a session.
-In the other case where participants update their current session upon 
-recieving a control message, the offset can usually be inferred based on the local state. 
-For instance, if the user receives a ``next'' message, then they
-start the next song with an offset of 0. If a user receives a ``pause" 
-message, they stop the current song and keep the elapsed time as the offset.
-If the user receives a ``play'' message they start the current song at the 
-local offset, which was set when the ``pause'' message was received. The exception to this 
-is if the current paused song is at the beginning, indicating
-that this user has joined the session while the song was paused or that this user is
-ahead of the host and is waiting for a control message from the host. 
-In this case the user adjusts the current song offset with what 
-they recieve from the server. Conversely, if the listener lags behind the host, then they will
-receive a ``next'' message before the end of the song and start the next song. Figure~\ref{fig:syncUsers}
-illustrates the timeline in the cases where a listener is behind the host and where a listener
-is ahead of the host.
-
-\begin{figure}[t!]
-	\centering
-	\includegraphics[width=85mm]{syncSessionUsers.png}
-	\caption{The synchronization timeline for a listener that's ahead of or behind the host}
-	\label{fig:syncUsers}
-\end{figure}
-
+Blobstore is a datastore that holds large data objects (blobs) that 
+are too big to be stored in the Datastore. Once a blob has been 
+created, it cannot be modified; thus, it can be considered read-only
+storage. We choose Blobstore to serve our content due to the higher
+file size limit. Moreover, it also performs automatic caching on its 
+data. \cite{appengine}
 
 \subsection{Design Considerations}
 \label{sec:considerations}
-We made certain design decisions in order to achieve the goals discussed
+We made certain decisions in order to achieve the goals discussed
 in Section~\ref{sec:intro}. In this section we summarize and discuss these choices.
 \begin{enumerate}
-  \item \textbf{Performance}: Songs are prefetched by the client for seemless transitions. 
-  		We also perform synchronization, as discussed in Section~\ref{sec:sync}.
+  \item \textbf{Performance}: Songs are fetched by the client as soon as they are available, 
+  		allowing for seemless transitions between songs.
+  		We also perform synchronization, as discussed in Section~\ref{sec:sync}, 
+  		and use eventually consistent queries when possible, as mentioned in 
+  		Section~\ref{sec:storage}.
   \item \textbf{Availability}: We rely on Google services such as 
-  		Datastore and Blobstore, which are highly replicated and reliable. Requests are
-  		also served as long as Google App Engine is available. When a listener goes offline,
+  		Datastore and Blobstore, which are highly replicated and reliable. 
+  		In addition, HTTP requests to the server are served as long as 
+  		Google App Engine is available. When a listener goes offline,
   		this does not affect session availability of the other listeners. 
   \item \textbf{Scalability}: For scalability purposes, we allow concurrent requests.
   		To minimize the number and size of messages, we allow incremental
-  		updates. We do not send all session data on an update
+  		updates. We do not send all session data on an update except when
+  		a listener joins a session.
 \end{enumerate}
