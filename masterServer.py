@@ -76,14 +76,12 @@ class MainPage(webapp.RequestHandler):
         logging.info('testing: ' + str(testing))
 
         if not user:
-
             # generate random user when testing
             if testing:
                 user = users.User(str(time.mktime(datetime.datetime.now().timetuple())) + '@test.com')
             else:
                 self.redirect(users.create_login_url(self.request.uri))
                 return
-
         if not session_key:
             # No session specified, create a new one, make this the host 
             # If this user is already hosting, connect them to the existing session
@@ -229,7 +227,7 @@ class AddListener(webapp.RequestHandler):
                 # first check if user is actually a host, not a listener
                 hostACL = findACL(user.user_id())
                 session = Session.get_by_key_name(hostACL.sessionkey)
-                if (session.host.user_id() == user.user_id()):
+                if session & (session.host.user_id() == user.user_id()):
                     pass
                     # actually a host
                     # send info on new listener's channel
