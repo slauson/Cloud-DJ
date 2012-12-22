@@ -98,7 +98,7 @@ is ahead of the host.
 \end{figure}
 
 
-\subsection{Design Considerations}
+\section{Design Considerations}
 \label{sec:considerations}
 We made certain design decisions in order to achieve the goals discussed
 in Section~\ref{sec:intro}. In this section we summarize and discuss these choices.
@@ -107,9 +107,43 @@ in Section~\ref{sec:intro}. In this section we summarize and discuss these choic
   		We also perform synchronization, as discussed in Section~\ref{sec:sync}.
   \item \textbf{Availability}: We rely on Google services such as 
   		Datastore and Blobstore, which are highly replicated and reliable. Requests are
-  		also served as long as Google App Engine is available. When a listener goes offline,
-  		this does not affect session availability of the other listeners. 
+  		also served as long as Google App Engine is available. We discuss how our system
+		behaves with various failure modes in Section~\ref{sec:faultTolerance}.
   \item \textbf{Scalability}: For scalability purposes, we allow concurrent requests.
   		To minimize the number and size of messages, we allow incremental
   		updates. We do not send all session data on an update
 \end{enumerate}
+
+\subsection{Fault Tolerance}
+\label{sec:faultTolerance}
+There are several components of our system that could fail. The host or listener
+of a session could lose connection to the server or the master/session server
+could go down. We discuss each type of
+failure below with respect to the impact on other users of the system.
+
+When the host of a session goes down, the system mainly continues
+to operate as normal. Any listeners in the session of the down host
+will continue playing the current song until completion. At that
+time, they will wait until the host reconnects and updates the
+session server with new information. Other clients will still be
+able to join the session, but will have to wait like the current
+listeners. Once the host reconnects, it rejoins its hosted session
+and continues playback as if it just joined the session.
+
+A listener losing connection has very little impact on the system. The session
+server will detect the channel failure and cleanup necessary state
+associated with the listener. Other listeners as well as the host
+of the session will not be impacted by the disconnected listener.
+
+When the master server fails, active sessions continue to
+operate as before. Hosts and listeners can continue to listen
+together to existing and newly added songs. However, new clients
+attempting to connect to the system will have their requests time
+out because the master server handles all initial client connections.
+
+If the session server fails, all session updates will fail.
+Clients will finish the current song of their session and then
+will have to wait for the session server to come back up. New clients
+first connecting to the system will be able to login, but will not
+be able to join a session. They will also be unable to start a session until
+the session server comes back up.
