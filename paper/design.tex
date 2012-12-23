@@ -42,7 +42,7 @@ The client has access to its user's music and playlists and
 also keeps track of data such as the user's current 
 session and the user's potential sessions (sessions 
 this user can access). For the current session, the 
-client keeps track of the current session key and relevant song information. 
+client keeps track of the session key and relevant song information. 
 For the potential sessions, the client keeps the host, 
 session key, and currently playing song.
 
@@ -123,8 +123,8 @@ and blobstore.
 
 \subsubsection{Updating Sessions}
 \label{sec:playSession}
-Hosts may update the sessions using several types of messages: ``upload'',
-``play,'' ``pause,'' and ``next,''. Songs are added to the session when 
+Hosts may update the sessions using several types of messages: ``upload,''
+``play,'' ``pause,'' and ``next.'' Songs are added to the session when 
 the host client contacts the session handler with an ``upload'' message, 
 indicating that it wants to add a song to the playlist. The session 
 handler forwards the song to the blobstore and retrieves the corresponding 
@@ -133,7 +133,7 @@ handler then updates the session playlist in the datastore and sends the
 blob key to all clients in the session. The clients then fetch the song 
 from the blobstore. 
 
-Unsurprisingly, the ``play'', ``pause,'' and ``next'' messages 
+Unsurprisingly, the ``play,'' ``pause,'' and ``next'' messages 
 indicate when the host wants to unpause, pause, and skip the current song, respectively.
 The host sends these control messages to the session handler, which updates
 the session in the datastore and then propagates the message to all session
@@ -186,20 +186,20 @@ the correct offset to all session listeners.
 
 This timestamping synchronization is used mainly when a user joins a session.
 In the other case where participants update their current session upon 
-recieving a control message, the offset can usually be inferred based on the local state. 
-For instance, if the user receives a ``next'' message, then they
+recieving a control message, the offset can usually be inferred based on the 
+local state. For instance, if the user receives a ``next'' message, then they
 start the next song with an offset of 0. If a user receives a ``pause" 
 message, they stop the current song and keep the elapsed time as the offset.
 If the user receives a ``play'' message they start the current song at the 
-local offset, which was set when the ``pause'' message was received. The exception to this 
-is if the current paused song is at the beginning, indicating
-that this user has joined the session while the song was paused or that this user is
-ahead of the host and is waiting for a control message from the host. 
+local offset, which was set when the ``pause'' message was received. The 
+exception to this is if the current paused song is at the beginning, indicating
+that this user has joined the session while the song was paused or that this 
+user is ahead of the host and is waiting for a control message from the host. 
 In this case the user adjusts the current song offset with what 
-they recieve from the server. Conversely, if the listener lags behind the host, then they will
-receive a ``next'' message before the end of the song and start the next song. Figure~\ref{fig:syncUsers}
-illustrates the timeline in the cases where a listener is behind the host and where a listener
-is ahead of the host.
+they recieve from the server. Conversely, if the listener lags behind the host, 
+then they will receive a ``next'' message before the end of the song and start 
+the next song. Figure~\ref{fig:syncUsers} illustrates the timeline in the cases 
+where a listener is behind the host and where a listener is ahead of the host.
 
 \begin{figure}[t!]
 	\centering
