@@ -44,7 +44,7 @@ listed below.
 \item New sessions/listeners are added to the system.
 
 \item The time the current song ended is recorded for both the
-host and listener.
+host and original listener.
 
 \item The host adds a new song. Go to step 3.
 
@@ -108,13 +108,24 @@ outdated session information.
 \end{figure}
 
 \subsection{Scalability}
-In terms of scalability, we wanted to see how response 
-time would be affected as more and more users joined a session. 
+In terms of scalability, we tested how   
+the number of listeners in a session 
+would affect the amount of time it takes 
+for a new user to join. 
 To test this, we had one client start hosting a session and then had 
-another user join the session as a listener. On joining, it would request 
-the page 100 times to collect average response time, 
-then subsequently request the session page every 30 seconds. 
-Every minute, another listener would join the session, also timing it's initial 
-100 requests and then periodically requesting the page again. In this way, 
-we hoped to get a better sense of the difference in response time, if any, 
-between the first listener joining a session
+another user join the session as a listener. On joining, it would time 
+how long it took to recieve a response from the data server. 
+A minute later, another user would 
+join the session to time how long it took the data server to respond to its request. 
+We repeated this up to one hundred 
+users. We stopped at one hundred  since we are limited to one hundred channels
+and each user requires a channel. As you can see in Figure \ref{fig:addListenersJoinTime}, 
+the first listener takes less than one second to join a music session 
+whereas the the one hundredth user takes over four seconds to join a music session.  
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.5\textwidth]{deployed_time5.pdf}
+	\caption{Time for listener to join a session}
+	\label{fig:addListenersJoinTime}
+\end{figure}

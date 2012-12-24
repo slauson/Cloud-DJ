@@ -18,7 +18,7 @@ from urllib import urlencode
 # Modify these values to control how the testing is done
 
 # Which URL to call to join a session
-URL = 'http://4.cloud-dj.appspot.com/?testing&session_key=oQAzElzHRQ'
+URL = 'http://4.cloud-dj.appspot.com/?testing&session_key=m7o6SU6BYO'
 #URL = 'http://localhost:8080/?testing&session_key=SINFXmx4tp'
 
 # How many threads should be running at peak load for the hardest test
@@ -28,7 +28,7 @@ NUM_THREADS = 100
 THREAD_SLEEP_TIME = 30 # seconds
 
 # How many times to run test to take average response time
-REPS = 100
+REPS = 1 # (each time creates a new user, and hence a new channel, so can't do more than once)
 
 # How many minutes the test should run with all threads active.
 TIME_AT_PEAK_QPS = 1 # minutes
@@ -38,9 +38,9 @@ TIME_AT_PEAK_QPS = 1 # minutes
 DELAY_BETWEEN_THREAD_START = 60 # seconds
 
 # Which file to append timing results to
-results_filename = "nthListenerTime/deployed_time.txt"
+results_filename = "nthListenerTime/deployed_time5.txt"
 
-
+h = httplib2.Http(timeout=30)
 quitevent = Event()
 
 def threadproc(N, results_file):
@@ -71,6 +71,7 @@ def threadproc(N, results_file):
             except socket.timeout:
                 pass
         else:
+            #resp, content = h.request(URL) # would create a new user 
             time.sleep(THREAD_SLEEP_TIME)
 
     print "Thread finished: %s" % current_thread().getName()
