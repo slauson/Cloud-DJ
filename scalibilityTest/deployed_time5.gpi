@@ -1,0 +1,22 @@
+#http://ajhaupt.blogspot.com/2010/12/gnuplot-stacked-histograms.html
+
+#PLOT SETTINGS
+set term postscript eps color
+set output "deployed_time5.eps"
+set title "Listener Time"
+set xlabel "# of listeners"
+set ylabel "time (seconds)"
+
+# best fit line
+b = 0.0
+m = 0.0
+f(x) = m*x + b
+fit f(x) 'deployed_time5.dat' via b,m
+
+set label "f(x) = 0.030197x + 1.0457" at 70,2.5
+# lt 3 means blue
+# pt 5 means filled square
+plot 'deployed_time5.dat' with points lt 3 pt 5 title "", \
+f(x) with lines lt 3 lw 1 title ""
+# lt 3 means blue
+# lw 1 normal line width
