@@ -1,13 +1,16 @@
 \section{Conclusion}
     \label{sec:conc}
 We have developed a music sharing application called ClouDJ.
-ClouDJ allows multiple clients to listen to music together. A host
-can choose songs to play that other clients can listen to in
-real time. ClouDJ uses a JavaScript-based client and a Google App Engine
+ClouDJ allows multiple clients to listen to music together. A host can start
+a music session that other clients can join and listen to in
+realtime. ClouDJ uses a JavaScript-based client and a Google App Engine
 backed server. Through our design and implementation, ClouDJ
-is able to achieve good performance with many active sessions
-or listeners. It also has high availability through the use of Datastore and
-Blobstore for session and song storage as well as a multiple-handler based server.
-Finally, ClouDJ achieves acceptable scalability in terms of join session response time
-and good scalability in terms of playback as more listeners are added to a session,
-shown in our evaluation section.
+is able to achieve our design goals of good performance, availability, and scalability.
+ClouDJ achieves good performance with many active sessions
+or listeners, supported by our evaluation results. It does so by using efficient synchronization between clients.
+ClouDJ also achieves high availability of music sessions through the use of Google App Engine
+services for sessions and songs. Additionally, it tolerates many
+component-based failures such as disconnected listeners or a master server failure.
+Finally, ClouDJ achieves good playback scalability as more clients are added to the system,
+shown in our evaluation section. It does so by using the highly concurrent and scalable infrastructure
+of Google App Engine.
