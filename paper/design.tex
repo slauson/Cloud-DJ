@@ -186,7 +186,7 @@ the correct offset to all session listeners.
 
 This timestamping synchronization is used mainly when a user joins a session.
 In the other case where participants update their current session upon 
-recieving a control message, the offset can usually be inferred based on the 
+receiving a control message, the offset can usually be inferred based on the 
 local state. For instance, if the user receives a ``next'' message, then they
 start the next song with an offset of 0. If a user receives a ``pause" 
 message, they stop the current song and keep the elapsed time as the offset.
@@ -196,7 +196,7 @@ exception to this is if the current paused song is at the beginning, indicating
 that this user has joined the session while the song was paused or that this 
 user is ahead of the host and is waiting for a control message from the host. 
 In this case the user adjusts the current song offset with what 
-they recieve from the server. Conversely, if the listener lags behind the host, 
+they receive from the server. Conversely, if the listener lags behind the host, 
 then they will receive a ``next'' message before the end of the song and start 
 the next song. Figure~\ref{fig:syncUsers} illustrates the timeline in the cases 
 where a listener is behind the host and where a listener is ahead of the host.
