@@ -3,10 +3,11 @@
 We have developed a music sharing application called ClouDJ.
 ClouDJ allows multiple clients to listen to music together. A host
 can choose songs to play that other clients can listen to in
-realtime. ClouDJ uses a JavaScript-based client and a Google App Engine
+real time. ClouDJ uses a JavaScript-based client and a Google App Engine
 backed server. Through our design and implementation, ClouDJ
 is able to achieve good performance with many active sessions
 or listeners. It also has high availability through the use of Datastore and
 Blobstore for session and song storage as well as a multiple-handler based server.
-Furthermore, ClouDJ achieves good scalability as more clients are added to the system,
+Finally, ClouDJ achieves acceptable scalability in terms of join session response time
+and good scalability in terms of playback as more listeners are added to a session,
 shown in our evaluation section.

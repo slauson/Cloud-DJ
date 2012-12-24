@@ -95,15 +95,21 @@ server will detect the channel failure and cleanup necessary state
 associated with the listener. Other listeners as well as the host
 of the session will not be impacted by the disconnected listener.
 
-When the master server fails, active sessions continue to
+When the master handler fails, active sessions continue to
 operate as before. Hosts and listeners can continue to listen
 together to existing and newly added songs. However, new clients
 attempting to connect to the system will have their requests time
-out because the master server handles all initial client connections.
+out because the master handler manages all initial client connections.
 
-If the session server fails, all session updates will fail.
+If the session handler fails, all session updates will fail.
 Clients will finish the current song of their session and then
-will have to wait for the session server to come back up. New clients
+will have to wait for the session handler to come back up. New clients
 first connecting to the system will be able to login, but will not
 be able to join a session. They will also be unable to start a session until
-the session server comes back up.
+the session handler comes back up.
+
+Note, however, that Google App Engine uses multiple web servers to
+handle requests reliably and that requests can be handled by any of
+those servers. Moreover, the number of servers is automatically 
+adjusted based on load. Thus, as long as there is at least one server available
+running our handlers the system will operate as normal.
